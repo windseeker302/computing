@@ -1,0 +1,498 @@
+# 分布式存储GlusterFS 练习
+
+## 1.1 实验介绍
+
+本实验将通过ECS虚拟机作为存储节点，安装Glusterfs集群，并创建不同卷类型供客户端访问使用。 本实验内容包括：
+
+GlusterFS服务器集群搭建
+
+GlusterFS客户端搭建
+
+不同类型卷的创建及使用
+
+集群及卷管理
+
+## 1.2 实验组网介绍
+
+6台机器，ip分别为192.168.1.31，192.168.1.32，192.168.1.33，192.168.1.34，192.168.1.35，192.168.1.36，这六台机器部署glusterfs，每个机器挂六块盘，再准备一台机器当客户端。
+
+​                                                                      
+
+## 1.3 实验操作步骤
+
+### 1.3.1 准备机器，搭建基础环境
+
+对/dev/vdb磁盘进行分区，对每个节点的磁盘配置6个分区/dev/vdb1、/dev/vdb2、/dev/vdb3、/dev/vdb4、/dev/vdb5、/dev/vdb6，其中主分区dev/vdb1、主分区/dev/vdb2、主分区/dev/vdb3、逻辑分区/dev/vdb5、逻辑分区/dev/vdb6每个分区2G，/dev/vdb4为拓展分区5G：
+
+对创建出来的磁盘分区进行格式化，命令如下：
+
+~~~shell
+mkfs.xfs /dev/vdb1
+mkfs.xfs /dev/vdb2
+mkfs.xfs /dev/vdb3
+mkfs.xfs /dev/vdb5
+mkfs.xfs /dev/vdb6
+~~~
+
+
+
+格式化完成后查看磁盘类型。
+
+~~~shell
+blkid /dev/vdb5
+~~~
+
+
+
+### 1.3.2 挂载磁盘分区
+
+为不同的磁盘分区创建挂载点：
+
+~~~shell
+mkdir -p /exp/vdb1 /exp/vdb2 /exp/vdb3 /exp/vdb5 /exp/vdb6
+~~~
+
+​     
+
+执行挂载命令，挂载磁盘分区到对应挂载点：
+
+~~~shell
+mount /dev/vdb1 /exp/vdb1
+mount /dev/vdb2 /exp/vdb2
+mount /dev/vdb3 /exp/vdb3 
+mount /dev/vdb5 /exp/vdb5
+mount /dev/vdb6 /exp/vdb6
+~~~
+
+
+
+编辑fstab文件，设置开机自动挂载。
+
+~~~shell
+echo "/dev/vdb1  /exp/vdb1 xfs defaults 0 0" >> /etc/fstab
+echo "/dev/vdb2  /exp/vdb2 xfs defaults 0 0" >> /etc/fstab
+echo "/dev/vdb3  /exp/vdb3 xfs defaults 0 0" >> /etc/fstab
+echo "/dev/vdb5  /exp/vdb5 xfs defaults 0 0" >> /etc/fstab
+echo "/dev/vdb6  /exp/vdb6 xfs defaults 0 0" >> /etc/fstab
+~~~
+
+
+
+为每个挂载点创建子目录作为glusterfs的brick。
+
+~~~shell
+mkdir -p /exp/vdb1/brick /exp/vdb2/brick /exp/vdb3/brick /exp/vdb5/brick /exp/vdb6/brick 
+~~~
+
+
+
+配置所有存储节点的/etc/hosts文件，设置主机名映射，方便后续使用。
+
+~~~shell
+echo "192.168.1.31 node1" >> /etc/hosts
+echo "192.168.1.32 node2" >> /etc/hosts
+echo "192.168.1.33 node3" >> /etc/hosts
+echo "192.168.1.34 node4" >> /etc/hosts
+echo "192.168.1.35 node5" >> /etc/hosts
+echo "192.168.1.36 node6" >> /etc/hosts
+~~~
+
+
+
+### 1.3.3 安装GlusterFS服务器端软件包
+
+使用命令安装GlusterFS服务器端，并启动服务：
+
+~~~shell
+yum -y install glusterfs-server
+systemctl start glusterd
+systemctl enable glusterd
+~~~
+
+
+
+重复步骤，分别完成node2、node3、node4、node5和node6的配置。
+
+
+
+### 1.3.4 配置GlusterFS存储信任池
+
+登录node1节点，使用如下命令，添加其他信任池节点。
+
+~~~shell
+gluster peer probe node2
+gluster peer probe node3
+gluster peer probe node4
+gluster peer probe node5
+gluster peer probe node6
+~~~
+
+
+
+配置完成后，查看信任池状态。
+
+~~~shell
+gluster peer status
+~~~
+
+
+
+使用如下命令查看信任池列表：
+
+~~~shell
+gluster pool list
+~~~
+
+
+
+此时node1、node2、node3、node4、node、node6已经都加入存储信任池，在其他节点也可以查到信任池状态和信任池列表。
+
+​    
+
+### 1.3.5 创建测试卷
+
+使用如下命令创建一个测试卷test-volume用于客户端挂载，这里使用node4的/dev/vdb1/brick和node5的/dev/vdb1/brick，创建一个简单的复制卷用户挂载测试。
+
+~~~shell
+gluster volume create test-volume replica 2 node4:/exp/vdb1/brick  node5:/exp/vdb1/brick
+~~~
+
+
+
+查看卷信息：
+
+~~~shell
+gluster volume info
+~~~
+
+
+
+发现test-volume卷的状态为“Created”，并可以看到其中包含的bricks。使用如下命令启动卷，再次查看卷信息：
+
+~~~shell
+gluster volume start test-volume
+~~~
+
+
+
+卷状态变为已启动。
+
+
+
+### 1.3.6 安装客户端
+
+登录Client01客户端，使用如下命令安装客户端服务：
+
+~~~shell
+yum install -y glusterfs glusterfs-fuse
+~~~
+
+
+
+编辑配置/etc/hosts文件，添加所有存储节点的主机名映射。
+
+~~~shell
+echo "192.168.1.31 node1" >> /etc/hosts
+echo "192.168.1.32 node2" >> /etc/hosts
+echo "192.168.1.33 node3" >> /etc/hosts
+echo "192.168.1.34 node4" >> /etc/hosts
+echo "192.168.1.35 node5" >> /etc/hosts
+echo "192.168.1.36 node6" >> /etc/hosts
+~~~
+
+
+
+​     
+
+### 1.3.7 客户端挂载
+
+在客户端Client01中，创建目录/mnt/gfs/test，用于挂载test-volume卷。
+
+~~~shell
+mkdir -p /mnt/gfs/test
+~~~
+
+
+
+使用如下命令进行挂载：
+
+~~~shell
+mount -t glusterfs node1:test-volume /mnt/gfs/test
+~~~
+
+
+
+在/mnt/gfs/test中，创建文件test.txt，并写入“test”。
+
+~~~shell
+cd /mnt/gfs/test
+echo "test" > test.txt
+~~~
+
+
+
+返回node4的/exp/vdb1/brick和node5的/exp/vdb1/brick，并查看其中内容，就会发现两个节点都有相同文件，说明复制卷 test-volume 挂载成功。
+
+### 1.3.8 分布式卷创建和使用
+
+GlusterFS的分布式卷会随机将创建的文件保存在不同的brick中。使用如下命令创建分布式卷gv-dis，并启动：
+
+~~~shell
+gluster volume create gv-dis node1:/exp/vdb1/brick node2:/exp/vdb1/brick
+gluster volume start gv-dis
+~~~
+
+
+
+查看卷列表。
+
+~~~shell
+gluster volume list
+~~~
+
+
+
+登录到Client01客户端，创建挂载点/mnt/gfs/dis，挂载gv-dis。
+
+~~~shell
+mkdir -p /mnt/gfs/dis
+mount -t glusterfs node1:gv-dis /mnt/gfs/dis
+~~~
+
+
+
+### 1.3.9 复制卷的创建和使用
+
+使用node1、node2、node3中的/exp/vdb2/brick创建一个有3副本的卷gv-rep：
+
+~~~shell
+gluster volume create gv-rep replic 3 node1:/exp/vdb2/brick node2:/exp/vdb2/brick node3:/exp/vdb2/brick
+gluster volume start gv-rep
+~~~
+
+
+
+登录Client01挂载gv-rep到挂载点/mnt/gfs/rep。
+
+
+
+
+
+### 1.3.10 分布式复制卷创建和使用
+
+根据实验组网中的信息，使用4个Brick作为一个卷gv-disrep。
+
+~~~shell
+gluster volume create gv-disrep replic 2 node1:/exp/vdb3/brick node2:/exp/vdb3/brick node3:/exp/vdb3/brick node4:/exp/vdb3/brick
+gluster volume start gv-disrep
+~~~
+
+
+
+这里发现分布式复制卷与复制卷创建时使用的命令相同，仅靠replica数量及后边添加的brick数量进行区分。
+
+登录Client01挂载gv-disrep到挂载点/mnt/gfs/disrep。
+
+~~~shell
+mkdir -p /mnt/gfs/disrep
+mount -t glusterfs node1:gv-disrep /mnt/gfs/disrep
+~~~
+
+
+
+​     
+
+gv-disrep卷中包含四块2G的brick，这里可以看到挂在后的gv-disrep大小为4G，为总容量的一半，也就是说其中另外一半为副本。
+
+进入/mnt/gfs/disrep挂载点，写入5个文件：
+
+~~~shell
+dd if=/dev/zero of=/mnt/gfs/disrep/test1.txt bs=1M count=40
+dd if=/dev/zero of=/mnt/gfs/disrep/test2.txt bs=1M count=40
+dd if=/dev/zero of=/mnt/gfs/disrep/test3.txt bs=1M count=40
+dd if=/dev/zero of=/mnt/gfs/disrep/test4.txt bs=1M count=40
+dd if=/dev/zero of=/mnt/gfs/disrep/test5.txt bs=1M count=40
+~~~
+
+
+
+返回node1、node2、node3和node4，分别查看其/exp/vdb3/brick中的文件。发现node1中的brick与node2中的brick互为副本，node3中的brick与node4中的brick互为副本。创建分布式复制卷时按照顺序相邻的两个brick会互为副本。
+
+### 1.3.11 分散卷创建和使用
+
+分散卷将文件的编码数据条带化，并添加了一些冗余，跨卷中的多个Brick存储。参考实验组网信息，使用node1、node2和node3的/exp/vdb5/brick组成分散卷gv-disp。每个文件分成2个条带进行保存+1个冗余。
+
+~~~shell
+gluster volume create gv-disp disperse 3 redundancy 1 node1:/exp/vdb5/brick node2:/exp/vdb5/brick node3:/exp/vdb5/brick
+gluster volume start gv-disp
+~~~
+
+
+
+登录Client01挂载gv-disp到挂载点/mnt/gfs/disp。
+
+~~~shell
+mkdir -p /mnt/gfs/disp
+mount -t glusterfs node1:gv-disp /mnt/gfs/disp
+~~~
+
+
+
+gv-disp卷中包含三块2G的brick，这里可以看到挂在后的gv-disp大小为4G，另外2G用于保存冗余。
+
+进入/mnt/gfs/disp挂载点，写入5个文件：
+
+~~~shell
+dd if=/dev/zero of=/mnt/gfs/disp/test1.txt bs=1M count=40
+
+dd if=/dev/zero of=/mnt/gfs/disp/test2.txt bs=1M count=40
+
+dd if=/dev/zero of=/mnt/gfs/disp/test3.txt bs=1M count=40
+
+dd if=/dev/zero of=/mnt/gfs/disp/test4.txt bs=1M count=40
+
+dd if=/dev/zero of=/mnt/gfs/disp/test5.txt bs=1M count=40
+~~~
+
+
+
+​     
+
+返回node1、node2和node3，分别查看其/exp/vdb5/brick中的文件,每个txt被分为2个数据段，使用纠删码对数据块重新编码为3个编码块，分散在不同Brick中。
+
+​     
+
+​     
+
+​     
+
+
+
+### 1.3.12 分布式分散卷创建和使用
+
+分布式分散卷与分布式复制卷相似，分布式复制是先复制再分布，而分布式分散卷是先分散再分布。使用node1、node2、node3、node4、node5和node6的/exp/vb6/brick组成分布式分散卷gv-dd。每个文件分成2个条带进行保存+1个冗余。
+
+~~~shell
+gluster volume create gv-dd disperse 3 redundancy 1 node1:/exp/vdb6/brick node2:/exp/vdb6/brick node3:/exp/vdb6/brick node4:/exp/vdb6/brick node5:/exp/vdb6/brick node6:/exp/vdb6/brick
+
+gluster volume start gv-dd
+~~~
+
+
+
+登录Client01挂载gv-disp到挂载点/mnt/gfs/dd。
+
+~~~shell
+mkdir -p /mnt/gfs/dd
+mount -t glusterfs node1:gv-dd /mnt/gfs/dd
+~~~
+
+   
+
+gv-disp卷中包含六块2G的brick，这里可以看到挂在后的gv-dd大小为8G，另外4G用于保存冗余。
+
+进入/mnt/gfs/dd挂载点，写入5个文件：
+
+~~~shell
+dd if=/dev/zero of=/mnt/gfs/dd/test1.txt bs=1M count=40
+
+dd if=/dev/zero of=/mnt/gfs/dd/test2.txt bs=1M count=40
+
+dd if=/dev/zero of=/mnt/gfs/dd/test3.txt bs=1M count=40
+
+dd if=/dev/zero of=/mnt/gfs/dd/test4.txt bs=1M count=40
+
+dd if=/dev/zero of=/mnt/gfs/dd/test5.txt bs=1M count=40
+~~~
+
+
+
+​     
+
+返回node1、node2、node3、node4、node5和node6，分别查看其/exp/vdb6/brick中的文件。所有文件被分布在了（node1/node2/node3）和（node4/node5/node6）两个分散卷中。没法分散卷中，文件被切分为2段，增加纠删码后分为3段存储在不同的brick中。
+
+
+
+### 1.3.13 向卷中增加brick
+
+向分布式卷中增加一个brick。使用如下命令向gv-dis卷中添加node3中的/exp/vdb1/brick。
+
+~~~shell
+gluster volume add-brick gv-dis node3:/exp/vdb1/brick 
+~~~
+
+
+
+已经增加了brick。登录Client01，直接查看卷容量即可，而ceph则是客户端执行分区扩容之后，才会看见容量增加了。
+
+在/mnt/gfs/dis中再创建3个文件：
+
+~~~shell
+dd if=/dev/zero of=/mnt/gfs/dis/add1.txt bs=1M count=40
+dd if=/dev/zero of=/mnt/gfs/dis/add2.txt bs=1M count=40
+dd if=/dev/zero of=/mnt/gfs/dis/add3.txt bs=1M count=40
+~~~
+
+
+
+返回node1、node2和node3，分别查看其/exp/vdb1/brick中的文件。
+
+> 发现文件仍未被放入新加入的brick中，为什么？
+>
+> glusterfs中卷新增brick后，需要重新平衡布局后才可以使用该brick。
+
+使用如下命令重新平衡布局：
+
+~~~shell
+gluster volume rebalance gv-dis start
+
+gluster volume rebalance gv-dis status
+~~~
+
+
+
+### 1.3.14 从卷中移除brick
+
+使用如下命令将node1的/exp/vdb1/brick移除 gv-dis。
+
+~~~shell
+gluster volume remove-brick gv-dis node1:/exp/vdb1/brick start
+gluster volume remove-brick gv-dis node1:/exp/vdb1/brick status
+gluster volume remove-brick gv-dis node1:/exp/vdb1/brick commit
+~~~
+
+
+
+### 1.3.15 删除卷
+
+查看当前卷列表。
+
+~~~shell
+gluster volume list     
+~~~
+
+使用如下命令删除test-volume测试卷。查看卷状态
+
+~~~shell
+gluster volume status test-volume
+~~~
+
+
+
+停止卷test-volume
+
+~~~shell
+gluster volume stop test-volume
+gluster volume delete test-volume
+# 再次查看卷列表，test-volume已经删除
+gluster volume list
+~~~
+
+​     
+
+### 1.3.16 灾难测试
+
+在node1中关闭glusterd服务。在其他node上查看存储信任池列表。发现node1已经离线。查看不同类型卷的状态。所有卷均已经不包括node1中brick。在Client01中查看不同卷挂载情况。所有卷挂载无影响。查看不同卷中的文件。不同类型卷中的内容也都存在。
+
+
+
