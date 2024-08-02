@@ -1365,7 +1365,9 @@ Systemd提供了12种不同类型的称为 `units`（单元）的各种实体之
 
 
 
-### git 命令
+### git
+
+#### 命令
 
 git 用法
 
@@ -1393,7 +1395,7 @@ usage: git [--version] [--help] [-c name=value]
 
 - pull：从另一个存储库或本地分支获取并与之集成/更新库。
 
-- push：更新远程参考以及相关对象。
+- push：推送分支内容（指定，默认为当前分支）到远程仓库。
 
 - log：显示提交日志，还可以看见是谁提交的。
 
@@ -1405,9 +1407,81 @@ usage: git [--version] [--help] [-c name=value]
 
 - fetch：将远程主机的最新内容拉到本地，用户在检查了以后决定是否合并到工作本机分支中。
 
+- config：命令配置 git 的配置文件
+
+- status: 列出所有已修改但尚未暂存（staged）的文件，以及所有已暂存但尚未提交的文件。
+
   
 
+#### 代理
 
+代理的方法有两情况：
+
+1. 使用 http 或 https 协议连接
+2. 使用 SSH 协议连接
+
+##### 一、使用 http 或 https 协议连接
+
+windows 和 linux 一样。
+
+~~~shell
+# HTTP/HTTPS 协议，port 需与代理软件设置的一致
+git config –-global http.proxy http://127.0.0.1:port  # 注意修改 port
+# SOCKS5 协议，port 需与代理软件设置的一致
+git config --global http.proxy socks5://127.0.0.1:port  # 注意修改 port
+
+# 查看 HTTP/HTTPS 协议代理
+git config --global --get http.proxy
+# 查看 SOCKS5 协议代理
+git config --global --get https.proxy
+
+# 取消代理
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+
+# 这里就不多说了，说了那么多，我们无非就是修改了 2 个文件，即 ~/.gitconfig 和 ~/.ssh/config ，删除或注释我们增加的相应内容（在相应行的开头加上 # 即可）即可完成取消代理。
+~~~
+
+
+
+> 注意：
+>
+> - `--glboal` 选项指的是修改 Git 的全局配置文件`~/.gitconfig`，而非各个 Git 仓库里的配置文件`.git/config`。
+> - `port`则为端口号。
+
+
+
+##### 二、使用 SSH 协议连接
+
+###### Linux（OpenBSD 版 netcat）和 macOS 用户
+
+```shell
+vim ~/.ssh/config
+Host github.com
+    User git
+    ProxyCommand nc -X connect -x 127.0.0.1:7890 %h %p
+```
+
+
+
+###### Windows 用户
+
+~~~powershell
+vim ~/.ssh/config
+Host github.com
+    User git
+    ProxyCommand connect -H 127.0.0.1:7890 %h %p
+~~~
+
+
+
+
+
+
+
+参考文档：
+
+[一文让你了解如何为 Git 设置代理 - Eric (ericclose.github.io)](https://ericclose.github.io/git-proxy-config.html#针对所有域名的-Git-仓库)
 
 
 
