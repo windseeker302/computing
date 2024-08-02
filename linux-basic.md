@@ -1035,9 +1035,9 @@ socks5   10.64.150.222  7890		# <协议名称>  <主机名>  <端口号>
 ~~~shell
 # 在 /etc/profile 中加入三行配置
 cat >> /etc/profile << EOF 
-export https_proxy=http://10.64.150.223:7890  
-export http_proxy=http://10.64.150.223:7890
-export all_proxy=socks5://10.64.150.223:7890
+export https_proxy=http://10.64.150.195:7890  
+export http_proxy=http://10.64.150.195:7890
+export all_proxy=socks5://10.64.150.195:7890
 EOF
 ~~~
 

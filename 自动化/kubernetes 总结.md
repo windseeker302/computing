@@ -1056,6 +1056,8 @@ securityContext:
 
 为 Pod 设置安全性上下文
 
+pod 和容器的安全策略可以在 pod 的 spec 或 container 的 securityContext 字段中进行设置，如果在 pod 和 conatiner 级别都设置了相同的安全类型字段，容器将使用 container 级别的设置。
+
 要为 Pod 设置安全性设置，可在 Pod 规约中包含 `securityContext` 字段。`securityContext` 字段值是一个 [PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#podsecuritycontext-v1-core) 对象。你为 Pod 所设置的安全性配置会应用到 Pod 中所有 Container 上。 下面是一个 Pod 的配置文件，该 Pod 定义了 `securityContext` 和一个 `emptyDir` 卷：
 
 ~~~shell
@@ -1075,6 +1077,8 @@ spec:
   - name: sec-ctx-demo
     image: busybox:1.28
     command: [ "sh", "-c", "sleep 1h" ]
+    securityContext:
+      privileged: true		# 是否 pod 以特权模式运行
     volumeMounts:
     - name: sec-ctx-vol
       mountPath: /data/demo
@@ -2097,6 +2101,8 @@ password=admin
 
 在创建 Secret 时，要注意如果要加密的字符中，包含了有特殊字符，需要使用转义符转移，例如 $ 转移后为 \\$,也可以对特殊字符使用单引号描述。
 
+
+
 ~~~shell
 # 通用生成
 kubectl create secret generic ws-secret --from-literal=username=admin --from-literal=password='123@_/23'
@@ -2117,7 +2123,19 @@ spec:
   - name: config-test
     image: 192.168.11.100:8848/ws/nginx:latest
     imagePullPolicy: IfNotPresent
+    
+# 为 sa 创建 secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jenkins
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: "jenkins"		# serveraccount 的名称
+type: kubernetes.io/service-account-token
 ~~~
+
+> 注意：在 1.25 之后创建 serviceaccount 不会自动生成 Secret。
 
 
 
