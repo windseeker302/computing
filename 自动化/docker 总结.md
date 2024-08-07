@@ -107,7 +107,7 @@ Dockerfile 是用来构建 Docker 镜像的文本文件，是由一条条构建�
 
 
 
-### 执行 dockerfile 的大致流程
+### dockerfile 第一次
 
 #### 1.编写 dockerfile
 
@@ -153,6 +153,10 @@ docker build -t test:v1.0 .
 ~~~shell
 docker run -d test:v1.0 
 ~~~
+
+
+
+
 
 
 
@@ -338,6 +342,310 @@ docker push windseeker302/test:mynginx
 
 
 ## compose 容器编排
+
+### 简介
+
+compose 项目是 Docker 官方的开源项目，负责实现对 Docker 容器集群的快速编排。从功能上看，跟 openstack 中的 Heat 十分类似。
+
+其代码目前在 https://github.com/docker/compose 上开源。
+
+Docker Compose 是一个用于定义和运行多容器 Docker 应用程序的工具。通过 Docker Compose，你可以使用 YAML 文件来配置应用程序的服务。然后，使用一个命令来启动和运行所有配置的服务。
+
+
+
+### 第一个案例
+
+官方文档：[Compose Build 规范 |Docker 文档 --- Compose Build Specification | Docker Docs](https://docs.docker.com/compose/compose-file/build/)
+
+1. 创建一个测试目录
+
+   ~~~shell
+   mkdir ems
+   ~~~
+
+   
+
+2. 编写 docker-compose.yml 文件
+
+   ~~~yml
+   version: "3.1"
+   
+   services:
+     tomcat:		# 服务名称，可以自定义，但是要确定唯一性
+   #    container_name: tomcat01 	# 容器名称，推荐默认名称
+       image: tomcat:8.0
+       ports:
+        - 8080:8080        # 最好加引号
+     mysql:
+       image: mysql:5.6
+       ports:
+        - "3306:3306"
+       restart: always
+       environment:
+        - "MYSQL_ROOT_PASSWORD=root"       # 第一种写法
+   #     MYSQL_ROOT_PASSWORD: root        # 第二种写法
+       volumes:
+   #    - "/root/mysqldata:/var/lib/mysql"   # 绝对路径
+        - "mysqlData:/var/lib/mysql"              # 别名，必须要声明
+   
+   volumes:
+     mysqlData:          # 声明数据卷别名
+   ~~~
+
+   1. version：docker-compose 版本和 docker 对应版本关系。
+   2. servers：定义和配置应用程序所需的所有服务。
+   3. volumes: 定义命名卷，这里是 `mysqlData`，用于持久化数据库数据。
+
+3. 启动 docker-compose
+
+   ~~~shell
+   docker-compose up -d 
+   ~~~
+
+   
+
+### docker-compose 模板指令
+
+很多很多~，官方文档奉上：[概览 |Docker 文档 --- Overview | Docker Docs](https://docs.docker.com/compose/compose-file/)
+
+以下是常见的模板指令：
+
+#### build 
+
+通过 docker-compose 在启动容器之前根据 dockerfile 文件构建镜像，然后根据构建好的镜像启动容器。
+
+~~~yaml
+version: "3.1"
+service:
+  apps:
+    # build: ./	# 指定 Dockerfile 上下文目录 context，一切都是默认值
+    build:
+      context: ./	# 指定 dockerfile 上下文目录
+      dockerfile: Dockerfile 	# 指定 dockerfile 文件名称
+    ports:
+     - "8081:8081"
+~~~
+
+
+
+#### command 
+
+覆盖容器启动后默认指定的命令
+
+~~~yaml
+version: "3.1"
+service:
+  apps:
+    image: mysql
+    ports:
+     - "3306:3306"
+    command: ["sh","-c","sleep 10"]
+~~~
+
+
+
+#### depends_on 
+
+解决容器的依赖，***启动先后***的问题，以下的例子中，先启动 ***apps1*** 再启动 ***apps2***
+
+~~~yml
+version: "3.1"
+service:
+  apps1:
+    image: redis
+ 
+  apps2:
+    image: mysql
+    ports:
+     - "3306:3306"
+    environment:
+      MYSQL_PASSWORD_ROOT: root
+    command: ["sh","-c","sleep 10"]
+    depends_on:
+     - apps1
+~~~
+
+
+
+#### env_file
+
+用于指定一个或多个文件，这些文件包含要传递给容器的环境变量。
+
+~~~yml
+version: "3.1"
+service:
+  apps1:
+    image: redis
+ 
+  apps2:
+    image: mysql
+    ports:
+     - "3306:3306"
+    env_file:
+     - ./.env
+    command: ["sh","-c","sleep 10"]
+    depends_on:
+     - apps1
+~~~
+
+
+
+#### environment
+
+指定环境变量，有两种方法：
+
+Map syntax:
+
+
+
+```yml
+environment:
+  RACK_ENV: development
+  SHOW: "true"
+  USER_INPUT:
+```
+
+Array syntax:
+
+
+
+```yml
+environment:
+  - RACK_ENV=development
+  - SHOW=true
+  - USER_INPUT
+```
+
+
+
+#### networks
+
+In the following example, at runtime, networks front-tier and back-tier are created and the frontend service is connected to front-tier and back-tier networks.
+在下面的示例中，在运行时，创建了***前端***和***后端***网络，并将***前端***服务连接到***前端***和***后端***网络。
+
+~~~yaml
+services:
+  frontend:
+    image: example/webapp
+    networks:
+      - front-tier
+      - back-tier
+
+networks:
+  front-tier:
+  back-tier:
+~~~
+
+
+
+#### restart
+
+定义了平台在容器终止时应用的策略。
+
+- `no`：默认重启策略。在任何情况下，它都不会重新启动容器。
+- `always`：策略始终重新启动容器，直到将其删除。
+- `on-failure[：max-retries]`：如果退出代码指示错误，策略将重新启动容器。（可选）限制 Docker 守护程序尝试的重新启动重试次数。
+- `unless-stopped`：无论退出代码如何，策略都会重新启动容器，但在服务停止或删除时会停止重新启动。
+
+~~~yaml
+    restart: "no"
+    restart: always
+    restart: on-failure
+    restart: on-failure:3
+    restart: unless-stopped
+~~~
+
+
+
+### docker-compose 常用命令
+
+```shell
+Usage:
+  docker-compose [-f ...] [options] [COMMAND] [ARGS...]  
+```
+
+> 注意：如果 docker-compose 没有跟特殊说明（service）时，默认就是对整个项目操作。
+
+#### up[重点]
+
+语法： `docker-compose up [options] [--scale SERVICE=NUM...] [SERVICE]`
+
+- 它可以将尝试自动完成包括构建镜像，（重新）创建服务，启动服务，并关联相关容器的一系列操作。
+- 默认情况下，docker-compose up 启动的容器都在前台，控制台会同时打印所有容器的输出信息，可以很方便进行调试。
+
+- 当通过 Ctrl-c 停止命令时，所有容器将会停止。
+- 如果使用 docker-compose up -d 将会在后台启动并运行所有的容器，一般推荐生产环境下使用该选项。
+
+------
+
+#### down[重点]
+
+语法：`docker-compose down [options]` 
+
+- docker-compose down 关闭所有容器。
+- 此命令会停止 up 命令启动的容器，并移除网络。
+
+------
+
+#### exec
+
+语法：`docker-compose exec [options] [-e KEY=VAL...] SERVICE COMMAND [ARGS...]`
+
+- 进入指定的容器。
+
+------
+
+#### ps
+
+语法：`docker-compose ps [options] [SERVICE...]`
+
+- 列出项目中目前的所有容器
+- 选项:
+  - -q：只打印容器的ID信息。
+
+------
+
+#### rm
+
+语法：`docker-compose rm [options] [SERVICE...]`
+
+- 删除所有（停止状态的）服务容器。
+
+------
+
+#### restart
+
+语法：`dokcer-compose restart [options] [SERVICE...]`
+
+- 重启整个项目或指定 id 服务。
+
+------
+
+#### top
+
+语法：`docker-compose top [SERVICE...]`
+
+- 显示正在运行的进程。
+
+------
+
+#### logs
+
+语法：`docker-compose logs [options] [SERVICE...]`
+
+- 查看容器的输出信息。
+
+------
+
+#### unpause 和 pause
+
+语法：`docker-compose unpause/pause [SERVICE...] `
+
+- 恢复和停止服务容器。
+
+
+
+
 
 参考文档： https://www.runoob.com/docker/docker-compose.html
 
