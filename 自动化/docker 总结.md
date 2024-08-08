@@ -156,7 +156,258 @@ docker run -d test:v1.0
 
 
 
+### 参数概述
 
+官方文档：[传送门](https://docs.docker.com/reference/dockerfile/)
+
+#### ADD
+
+语法：ADD [OPTIONS] <src> ... <dest>
+
+- 添加本地文件或远程文件和目录。
+
+  ~~~shell
+  ADD file1.txt file2.txt /usr/src/things/
+  ADD git@github.com:user/repo.git /usr/src/things/
+  ~~~
+
+> 注意：
+>
+> - 如果 `<src>` 是本地文件或目录，则该目录的内容将复制到指定的目标。
+>
+> - 如果 `<src>` 是本地 tar 存档，则会解压缩并提取到指定的目标。
+>
+> - 如果 `<src>` 是 URL，则将下载该 URL 的内容并将其放置在指定的目标位置。
+> - 如果 `<src>` 是 Git 仓库，则该仓库将克隆到指定的目标。
+
+------
+
+#### ARG
+
+语法：ARG <name>[=<default value>]
+
+- 使用构建时变量
+
+- 示例：
+
+  ~~~shell
+  ARG  CODE_VERSION=latest
+  FROM base:${CODE_VERSION}
+  ~~~
+
+  
+
+------
+
+#### CMD
+
+- 设置从映像运行容器时要执行的命令。
+
+- Dockerfile中只能有一个`CMD`指令。如果列出多个 CMD，则只有最后一个 `CMD` 生效。
+
+- 示例：
+
+  ~~~shell
+  CMD ["sh","-c","sleep 100"]
+  ~~~
+
+> 注意：不要将 `RUN` 与 `CMD` 混淆。`RUN`实际上运行一个命令并提交结果;`CMD` 在构建时不执行任何操作，但指定镜像的预期命令。
+
+------
+
+#### COPY
+
+语法：COPY [OPTIONS] <src> ... <dest>
+
+- `COPY` 指令从 `<src>` 复制新文件或目录，并将它们添加到映像的文件系统中的路径 `<dest>`。
+- 可以从生成上下文、生成阶段、命名上下文或图像中复制文件和目录。
+
+[Dockerfile 参考 |Docker 文档 --- Dockerfile reference | Docker Docs](https://docs.docker.com/reference/dockerfile/#copy)
+
+> ADD和COPY指令在功能上相似，但用途略有不同。
+>
+> `ADD` 和 `COPY` 在功能上相似。`COPY` 支持从[构建上下文](https://docs.docker.com/build/building/context/)或[多阶段构建](https://docs.docker.com/build/building/multi-stage/)中的某个阶段将文件基本复制到容器中。`ADD` 支持从远程 HTTPS 和 Git URL 获取文件的功能，以及在从构建上下文添加文件时自动提取 tar 文件的功能。
+
+------
+
+#### ENTRYPOINT
+
+- `docker run <image>` 的命令行参数将附加在 exec 表单 `ENTRYPOINT` 中的所有元素之后，并将覆盖使用 `CMD` 指定的所有元素。
+
+- 示例：
+
+  ~~~shell
+  ENTRYPOINT ["executable", "param1", "param2"]
+  ~~~
+
+------
+
+#### ENV
+
+语法：ENV <key>=<value> ...
+
+- 设置环境变量。
+
+- 示例：
+
+  ~~~shell
+  ENV MY_NAME="John Doe"
+  ENV MY_DOG=Rex\ The\ Dog
+  ENV MY_CAT=fluffy
+  ~~~
+
+------
+
+#### EXPOSE
+
+语法：EXPOSE <port> [<port>/<protocol>...]
+
+- 描述应用程序正在侦听的端口。
+
+- 通知 Docker 容器在运行时侦听指定的网络端口。您可以指定端口是侦听 TCP 还是 UDP，如果您不指定协议，则默认为 TCP。
+
+- `EXPOSE` 指令实际上并未发布端口。它充当构建映像的人员和运行容器的人员之间的一种文档，用于说明要发布的端口。要在运行容器时发布端口，请在 `docker run` 上使用 `-p` 标志来发布和映射一个或多个端口，或使用 `-P` 标志来发布所有公开的端口并将它们映射到高阶端口。
+
+- 示例：
+
+  ~~~shell
+  EXPOSE 80/tcp
+  EXPOSE 80/udp
+  ~~~
+
+------
+
+#### FROM
+
+语法：FROM [--platform=<platform>] <image> [AS <name>]
+
+- 从基础映像创建新的生成阶段。
+- 始化新的构建阶段，并为后续指令设置[基础映像](https://docs.docker.com/glossary/#base-image)。因此，有效的 Dockerfile 必须以 `FROM` 指令开头。图像可以是任何有效的图像。
+
+------
+
+#### HEALTHCHECK
+
+作用：在启动时检查容器的运行状况。
+
+两种形式：
+
+- `HEALTHCHECK [OPTIONS] CMD 命令`（通过在容器内运行命令来检查容器运行状况）
+
+- `HEALTHCHECK NONE`（禁用从基础映像继承的任何运行状况检查）
+
+官方文档：[Dockerfile 参考 |Docker 文档 --- Dockerfile reference | Docker Docs](https://docs.docker.com/reference/dockerfile/#healthcheck)
+
+------
+
+#### SHELL
+
+- `SHELL` 指令允许覆盖用于 shell 形式的命令的默认 shell。Linux 上的默认 shell 是 `[“/bin/sh”， “-c”`]，Windows 上的默认 shell 是 `[“cmd”， “/S”， “/C”]。``SHELL` 指令必须在 Dockerfile 中以 JSON 形式编写。
+
+- 示例：
+
+  ~~~shell
+  SHELL ["executable", "parameters"]
+  ~~~
+
+------
+
+#### LABEL
+
+语法：LABEL <key>=<value> <key>=<value> <key>=<value> ...
+
+- 指令将元数据添加到图像中。`LABEL`是一个键值对。若要在 `LABEL` 值中包含空格，请像在命令行分析中一样使用引号和反斜杠。
+
+- 示例：
+
+  ~~~shell
+  LABEL "com.example.vendor"="ACME Incorporated"
+  LABEL com.example.label-with-value="foo"
+  LABEL version="1.0"
+  LABEL description="This text illustrates \
+  that label-values can span multiple lines."
+  ~~~
+
+  
+
+------
+
+#### MAINTAINER（已弃用）
+
+- 指定图像的作者。
+
+- 示例：
+
+  ~~~shell
+  MAINTAINER <name>
+  ~~~
+
+> 注意：`MAINTAINER` 指令设置生成的图像的 *Author* 字段。`LABEL`指令是一个更灵活的版本，你应该使用它，因为它允许设置你需要的任何元数据，并且可以很容易地查看，例如使用`docker inspect`。要设置与 `MAINTAINER` 字段对应的标签，您可以使用：
+
+```dockerfile
+LABEL org.opencontainers.image.authors="SvenDowideit@home.org.au"
+```
+
+------
+
+#### RUN
+
+语法：
+
+```dockerfile
+# Shell form:
+RUN [OPTIONS] <command> ...
+# Exec form:
+RUN [OPTIONS] [ "<command>", ... ]
+```
+
+- 执行构建命令。
+
+------
+
+#### USER
+
+语法：
+
+  USER <user>[:<group>]
+
+  USER UID[:GID]
+
+- 设置用户和组 ID。
+
+- 示例：
+
+  ~~~shell
+  USER patrick
+  ~~~
+
+------
+
+#### VOLUME
+
+- 创建卷挂载。
+
+- 示例：
+
+  ~~~dockerfile
+  VOLUME ["/data"]
+  ~~~
+
+  
+
+------
+
+#### WORKDIR
+
+- 更改工作目录。
+
+- 示例：
+
+  ~~~dockerfile
+  WORKDIR /path/to/workdir
+  ~~~
+
+  
 
 
 

@@ -1347,6 +1347,7 @@ drwxr-xr-x. 6 root root       65 Jun 20 10:43 php
     - nginx
     - php
 
+# 执行
 ansible-playbook role.yaml
 ~~~
 
