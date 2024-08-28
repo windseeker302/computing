@@ -1,4 +1,4 @@
-# kubernetes 总结
+# 	kubernetes 总结
 
 ## 概念
 
@@ -297,8 +297,10 @@ systemctl enable --now cri-docker.service
 
 阿里镜像站：[kubernetes-new-core-stable安装包下载_开源镜像站-阿里云 (aliyun.com)](https://mirrors.aliyun.com/kubernetes-new/core/stable/?spm=a2c6h.25603864.0.0.76a836d2IJIawd)
 
+官方：[在 Linux 系统中安装并设置 kubectl | Kubernetes](https://kubernetes.io/zh-cn/docs/tasks/tools/install-kubectl-linux/)
+
 ~~~shell
-# 在阿里镜像站本地下载，然后下载到服务器里
+# 本地下载，然后下载到服务器里
 [root@k8s-master kubernetes]# ll
 total 55036
 -rw-r--r--. 1 root root  8604404 Jan 30 17:03 cri-tools-1.29.0-150500.1.1.x86_64.rpm
@@ -320,6 +322,37 @@ ssh k8s-node2 "yum localinstall -y kubernetes/*"
 ~~~
 
 
+
+2.4、配置 cgroup
+
+Linux系统每个进程都可以自由竞争系统资源，有时候会导致一些次要进程占用了系统某个资源（如CPU）的绝大部分，主要进程就不能很好地执行，从而影响系统效率，重则在linux资源耗尽时可能会引起错杀进程。因此linux引入了linux cgroups来控制进程资源，让进程更可控。
+
+kubeadm 支持在执行 `kubeadm init` 时，传递一个 `KubeletConfiguration` 结构体。 `KubeletConfiguration` 包含 `cgroupDriver` 字段，可用于控制 kubelet 的 cgroup 驱动。
+
+这是一个最小化的示例，其中显式的配置了此字段：
+
+```yaml
+# kubeadm-config.yaml
+kind: ClusterConfiguration
+apiVersion: kubeadm.k8s.io/v1beta3
+kubernetesVersion: v1.21.0
+---
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+cgroupDriver: systemd
+```
+
+
+
+这样一个配置文件就可以传递给 kubeadm 命令了：
+
+~~~shell
+kubeadm init --config kubeadm-config.yaml
+~~~
+
+
+
+> 警告：你需要确保容器运行时和 kubelet 所使用的是相同的 cgroup 驱动，否则 kubelet 进程会失败。
 
 ##### 3、部署 Kubernetes Master
 
@@ -531,6 +564,8 @@ This node has joined the cluster:
 Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
 ~~~
 
+
+
 给两台node节点打上标签
 
 ~~~shell
@@ -597,13 +632,138 @@ k8s-node2    Ready    work            172m   v1.29.1
 
    
 
-> - 注意：busybox 要用指定的 1.28 版本，不能用最新版本，最新版本，nslookup 会解析不到 dns 和 ip
+> - 注意：busybox 要用指定的 1.28 版本，不能用最新版本，最新版本，nslookup 会解析不到 dns 和 ip。
+
+### minikube
+
+[minikube](https://minikube.sigs.k8s.io/) 是一个轻量级的kubernetes集群环境，可以用来在本地快速搭建一个单节点的kubernetes集群。
+
+#### 安装 minikube
+
+~~~shell
+# Linux
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+~~~
+
+
+
+#### 启动 minikube
+
+~~~shell
+# 启动minikube
+minikube start
+~~~
+
+
 
 ## CRI
 
 CRI：容器接口规范，其主要功能就是启动和停止容器的组件叫做容器运行时（Container Runtime），因为pod中运行的容器，都是要经过kubelet的兼容的，但是要是每一种容器都要自己手动开发kubelet太麻烦，所以kubernetes就加入了容器运行时插件API，即Container Runtime Interface。
 
 Cgroup:Cgrep和namespace类似，也是将进程分组，但是目的与namespace不一样，namespace是为了隔离进程组之前的资源，而Cgroup是为了对一组进程进行统一的资源监控和限制。
+
+## api 访问控制
+
+用户
+
+- 有鉴于此，**Kubernetes 并不包含用来代表普通用户账号的对象**。 普通用户的信息无法通过 API 调用添加到集群中。
+- 与此不同，服务账号是 Kubernetes API 所管理的用户。它们被绑定到特定的名字空间， 或者由 API 服务器自动创建，或者通过 API 调用创建。服务账号与一组以 Secret 保存的凭据相关，这些凭据会被挂载到 Pod 中，从而允许集群内的进程访问 Kubernetes API。
+
+身份认证策略
+
+- Kubernetes 通过身份认证插件利用客户端证书、持有者令牌（Bearer Token）或身份认证代理（Proxy） 来认证 API 请求的身份。
+- 当集群中启用了多个身份认证模块时，第一个成功地对请求完成身份认证的模块会直接做出评估决定。 API 服务器并不保证身份认证模块的运行顺序。
+
+Kubernetes API 的访问控制
+
+用户使用 `kubectl`、客户端库或构造 REST 请求来访问 [Kubernetes API](https://v1-30.docs.kubernetes.io/zh-cn/docs/concepts/overview/kubernetes-api/)。 人类用户和 [Kubernetes 服务账号](https://v1-30.docs.kubernetes.io/zh-cn/docs/tasks/configure-pod-container/configure-service-account/)都可以被鉴权访问 API。 当请求到达 API 时，它会经历多个阶段，如下图所示：
+
+![image-20240818160602962](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20240818160602962.png)
+
+1. 传输安全：默认情况下，Kubernetes API 服务器在第一个非 localhost 网络接口的 6443 端口上进行监听， 受 TLS 保护。在一个典型的 Kubernetes 生产集群中，API 使用 443 端口。 该端口可以通过 `--secure-port` 进行变更，监听 IP 地址可以通过 `--bind-address` 标志进行变更。
+
+2. 认证：如上图的步骤 **1** 所示，建立 TLS 后， HTTP 请求将进入认证（Authentication）步骤。 集群创建脚本或者集群管理员配置 API 服务器，使之运行一个或多个身份认证组件。 身份认证组件在[认证](https://v1-30.docs.kubernetes.io/zh-cn/docs/reference/access-authn-authz/authentication/)节中有更详细的描述。
+
+3. 鉴权：如上图的步骤 **2** 所示，将请求验证为来自特定的用户后，请求必须被鉴权。请求必须包含请求者的用户名、请求的行为以及受该操作影响的对象。 如果现有策略声明用户有权完成请求的操作，那么该请求被鉴权通过。比如，小明用户只能在 projectCaribou 名称空间中读取 Pod，他如果访问别的命名空间的话，其鉴权请求将被拒绝。
+
+4. 准入控制：这一操作如上图的步骤 **3** 所示。准入控制模块是可以修改或拒绝请求的软件模块。 除鉴权模块可用的属性外，准入控制模块还可以访问正在创建或修改的对象的内容。准入控制器对创建、修改、删除或（通过代理）连接对象的请求进行操作。 准入控制器不会对仅读取对象的请求起作用。 有多个准入控制器被配置时，服务器将依次调用它们。
+
+   与身份认证和鉴权模块不同，如果任何准入控制器模块拒绝某请求，则该请求将立即被拒绝。
+
+   请求通过所有准入控制器后，将使用检验例程检查对应的 API 对象，然后将其写入对象存储（如步骤 **4** 所示）。
+
+5. 审计：Kubernetes 审计提供了一套与安全相关的、按时间顺序排列的记录，其中记录了集群中的操作序列。 集群对用户、使用 Kubernetes API 的应用程序以及控制平面本身产生的活动进行审计。
+
+
+
+### 使用 RBAC 鉴权
+
+基于角色（Role）的访问控制（RBAC）是一种基于组织中用户的角色来调节控制对计算机或网络资源的访问的方法。
+
+RBAC 鉴权机制使用 `rbac.authorization.k8s.io` [API 组](https://v1-30.docs.kubernetes.io/zh-cn/docs/concepts/overview/kubernetes-api/#api-groups-and-versioning)来驱动鉴权决定， 允许你通过 Kubernetes API 动态配置策略。
+
+要启用 RBAC，在启动 [API 服务器](https://v1-30.docs.kubernetes.io/zh-cn/docs/concepts/overview/components/#kube-apiserver)时将 `--authorization-mode` 参数设置为一个逗号分隔的列表并确保其中包含 `RBAC`。
+
+```shell
+kube-apiserver --authorization-mode=Example,RBAC --<其他选项> --<其他选项>
+```
+
+
+
+### Webhook 模式
+
+WebHook 是一种 HTTP 回调：某些条件下触发的 HTTP POST 请求；通过 HTTP POST 发送的简单事件通知。一个基于 web 应用实现的 WebHook 会在特定事件发生时把消息发送给特定的 URL。
+
+具体来说，当在判断用户权限时，`Webhook` 模式会使 Kubernetes 查询外部的 REST 服务。
+
+`Webhook` 模式需要一个 HTTP 配置文件，通过 `--authorization-webhook-config-file=SOME_FILENAME` 的参数声明。
+
+使用 HTTPS 客户端认证的配置例子：
+
+```yaml
+# Kubernetes API 版本
+apiVersion: v1
+# API 对象种类
+kind: Config
+# clusters 代表远程服务。
+clusters:
+  - name: name-of-remote-authz-service
+    cluster:
+      # 对远程服务进行身份认证的 CA。
+      certificate-authority: /path/to/ca.pem
+      # 远程服务的查询 URL。必须使用 'https'。
+      server: https://authz.example.com/authorize
+
+# users 代表 API 服务器的 webhook 配置
+users:
+  - name: name-of-api-server
+    user:
+      client-certificate: /path/to/cert.pem # webhook plugin 使用 cert
+      client-key: /path/to/key.pem          # cert 所对应的 key
+
+# kubeconfig 文件必须有 context。需要提供一个给 API 服务器。
+current-context: webhook
+contexts:
+- context:
+    cluster: name-of-remote-authz-service
+    user: name-of-api-server
+  name: webhook
+```
+
+
+
+
+
+
+
+### 准入控制器（Admission Controller）
+
+
+
+
+
+
 
 
 
@@ -2483,7 +2643,7 @@ spec:
 
 
 
-##### StorageClassNFS）
+#### StorageClassNFS
 
 Kubernetes提供了一套可以自动创建PV的机制,即:Dynamic Provisioning.而这个机制的核心在于:StorageClass这个API对象.
 
@@ -2721,17 +2881,12 @@ ClusterRole 功能与 Role 一样，区别时资源类型为群集类型，而 R
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: kube-proxy
-  namespace: kube-system
-rules:		 # 规则
-- apiGroups:	
-  - ""
-  resourceNames:
-  - kube-proxy
-  resources:		# 资源对象	
-  - configmaps
-  verbs:		# 动作（能做哪些事情）
-  - get
+  namespace: default
+  name: pod-reader
+rules:
+- apiGroups: [""] # "" 标明 core API 组
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
 ~~~
 
 
@@ -2742,22 +2897,26 @@ Role 或 ClusterRole 只是用于制定权限集合，具体作用于什么对�
 
 作用于 Namespace 内，可以将 Role 或者 ClusterRole 绑定到 User,Group,Service Account 上。
 
-##### 配置文件
+##### 示例：
 
 ~~~yaml
-apiVersion: rbac.authorization.k8s.io/v1
+piVersion: rbac.authorization.k8s.io/v1
+# 此角色绑定允许 "jane" 读取 "default" 名字空间中的 Pod
+# 你需要在该名字空间中有一个名为 “pod-reader” 的 Role
 kind: RoleBinding
 metadata:
-  name: kube-proxy-test		# RoleBinding 的名称
-  namespace: kube-system		# 应用到 kube-system 这个命名空间内，也时自己所在的命名空间
-roleRef:		# 角色绑定
-  apiGroup: rbac.authorization.k8s.io		# 对应api的组
-  kind: Role
-  name: kube-proxy
-subjects:		# 应用哪个主题之上
-- kind: ServiceAccount  	# 绑定 service account
-  name: kube-proxy
-  namespace: kube-system
+  name: read-pods
+  namespace: default
+subjects:
+# 你可以指定不止一个“subject（主体）”
+- kind: User
+  name: jane # "name" 是区分大小写的
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  # "roleRef" 指定与某 Role 或 ClusterRole 的绑定关系
+  kind: Role        # 此字段必须是 Role 或 ClusterRole
+  name: pod-reader  # 此字段必须与你要绑定的 Role 或 ClusterRole 的名称匹配
+  apiGroup: rbac.authorization.k8s.io
 ~~~
 
 
@@ -3021,27 +3180,6 @@ spec:
 
 helm是k8s的包管理工具，类似于centos的yum，k8s将管理的资源都抽象成api，并且推荐使用声明方式创建，修改，删除这些对象，每个 API 对象都通过一个 yaml 格式或者 json 格式的文本来声明。这带来的一个问题就是这些 API 对象声明文本的管理成本，每当我需要创建一个应用，都需要去编写一堆这样的声明文件，helm就是管理这些api对象的工具，它把创建一个应用所需的所有 Kubernetes API 对象声明文件组合并打包在一起。并提供了仓库的机制便于分发共享，还支持模版变量替换，同时还有版本的概念，使之能够对一个应用进行版本的管理。
 
-### Helm 概念
-
-- `Chart`：表示 helm 包，包含在 Kubernetes 集群内部运行应用程序，工具或服务所需的所有资源定义
-- `Reposityroy（仓库）`：用来存放和共享 charts 的地方。
-- `Release`：运行在 Kubernetes 集群中的 chart 的实例，一个 chart 通常在同一个集群中安装多次，每一次安装都会创建一个新的 release。
-
-### Helm 命令
-
-- helm repo list：列出，增加，删除 chart 仓库
-- helm search：使用关键字搜索 chart
-- helm pull：拉取远程仓库中的 chart 到本地
-- helm create：在本地创建新的 chart
-- helm dependency：管理chart 依赖
-- helm install：安装 chart
-- helm list：列出所有 release
-- helm lint：检查 chart 配置是否有误
-- helm package：打包本地 chart
-- helm rollback：回滚 release 到历史版本
-- helm uninstall：卸载 release
-- helm upgrade：升级 release
-
 ### 安装 Helm 客户端
 
 Helm 下载地址：[Releases · helm/helm (github.com)](https://github.com/helm/helm/releases)
@@ -3055,8 +3193,31 @@ tar -zxvf helm-v3.14.0-rc.1-linux-amd64.tar.gz
 sudo mv linux-amd64/helm /usr/local/bin/helm
 
 # 安装完成，查看版本
-[helm version]
+helm version
 ~~~
+
+
+
+### Helm 概念
+
+- `Chart`：表示 helm 包，包含在 Kubernetes 集群内部运行应用程序，工具或服务所需的所有资源定义。
+- `Reposityroy（仓库）`：用来存放和共享 charts 的地方。
+- `Release`：运行在 Kubernetes 集群中的 chart 的实例，一个 chart 通常在同一个集群中安装多次，每一次安装都会创建一个新的 release。
+
+### Helm 命令
+
+- helm repo list：列出，增加，删除 chart 仓库
+- helm search：使用关键字搜索 
+- helm pull：拉取远程仓库中的 chart 到本地
+- helm create：在本地创建新的 chart
+- helm dependency：管理chart 依赖
+- helm install：安装 chart
+- helm list：列出所有 release
+- helm lint：检查 chart 配置是否有误
+- helm package：打包本地 chart
+- helm rollback：回滚 release 到历史版本
+- helm uninstall：卸载 release
+- helm upgrade：升级 release
 
 
 
@@ -3329,11 +3490,25 @@ kubectl create token -n kube-system dashboard-admin
 
 安装 kubesphere 之前需要一个 sc(storageclass) 资源，可以参考前面持久化存储。
 
+## EFK
+
+主流的 ELK ([Elasticsearch](https://cloud.tencent.com/product/es?from_column=20065&from=20065), `Logstash`, Kibana) 目前已经转变为 EFK (Elasticsearch, `Filebeat` or `Fluentd`, Kibana) 比较重，对于容器云的日志方案业内也普遍推荐采用 Fluentd。
+
+- Elasticsearch 是实时全文搜索和分析引擎，提供搜集、分析、存储数据三大功能。
+- Filebeat 是一个轻量级的日志数据收集引擎，用Go语言编写，能高效地从大量日志文件中读取数据。
+- Kibana 是一个基于 Web 的图形界面，用于搜索、分析和可视化存储在 Elasticsearch 指标中的日志数据。
+
+Logstash 的主要作用是收集分布在各处的 log 并进行处理；Elasticsearch 则是一个集中存储 log 的地方，更重要的是它是一个全文检索以及分析的引擎，它能让用户以近乎实时的方式来查看、分析海量的数据。Kibana 则是为 Elasticsearch 开发的前端 GUI，让用户可以很方便的以图形化的接口查询 Elasticsearch 中存储的数据，同时也提供了各种分析的模块，比如构建 dashboard 的功能。
+
+### Elasticsearch 
 
 
 
+### Filebeat 
 
 
+
+### Kibana 
 
 
 

@@ -78,10 +78,165 @@
     - 工作原理-索引数据
       - 采用 Rest 风格 API，其 API 就是一次 http 请求，可以用任何工具发起 http 请求。RestAPI = 动作（PUT,POST）+对象(URL)。
   - 可视化：Kibana
+  
 - ELK
   - 采集：Logstash
   - 存储：Elasticsearch
   - 可视化：Kibana
+  
+  
+
+- 企业级“ELFK”
+
+  - 采集：Filebast
+  - 数据处理：LogStash
+  - 存储：Elasticsearch
+  - 可视化：Kibana
+
+  ![image-20240821164625895](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20240821164625895.png)
+
+## 实验
+
+部署 EFK （Elasticsearch,filebeat,kinana）。
+
+### 介绍
+
+| 节点  | ip             | 系统版本        | 应用版本                                           |
+| ----- | -------------- | --------------- | -------------------------------------------------- |
+| efk-1 | 172.129.78.124 | Centos 7.9.2009 | elasticsearch-8.15.0,filebeat-8.15.0,kibana-8.15.0 |
+| efk-2 | 172.129.78.37  | Centos 7.9.2009 | elasticsearch-8.15.0,filebeat-8.15.0               |
+| efk-3 | 172.129.78.202 | Centos 7.9.2009 | elasticsearch-8.15.0,filebeat-8.15.0               |
+
+
+
+### elasticsearch
+
+#### 概述
+
+- 文档型数据库 mongoDB,elasticsearch 等，
+
+#### 安装
+
+下载地址：https://www.elastic.co/cn/downloads/past-releases/elasticsearch-8-15-0
+
+二进制安装
+
+~~~shell
+tar -zxvf https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.15.0-linux-x86_64.tar.gz
+tar xf elasticsearch-8.15.0-linux-x86_64.tar.gz -C /opt/
+ln -s /opt/elasticsearch-8.15.0 /opt/elasticsearch
+useradd es
+mkdir -p /data/elasticsearch/{logs,data}
+chown -R es.es /data/elasticsearch /opt/elasticsearch-8.15.0
+su es -c "/opt/elasticsearch/bin/elasticsearch -d
+~~~
+
+
+
+RPM，deb包安装
+
+~~~shell
+# RPM
+wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.15.0-x86_64.rpm
+yum localinstall -y elasticsearch-8.15.0-x86_64.rpm
+
+# deb
+wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.15.0-amd64.deb
+dpkg -i elasticsearch-8.15.0-amd64.deb
+~~~
+
+
+
+#### 分布式集群部署
+
+从 8.0 开始，ES 简化了安全功能。自管理集群默认启用 Elastic Stack 安全性，配置工作几乎为零（其实8.x 的安全配置更麻烦了，知识默认启用了安全功能而已）。
+
+~~~shell
+# 配置文件
+egrep -v "^$|^#" /etc/elasticsearch/elasticsearch.yml 
+cluster.name: efk
+node.name: efk-1		# 各个节点的名称为 efk-1,efk-2,efk-2
+path.data: /var/lib/elasticsearch
+path.logs: /var/log/elasticsearch
+network.host: 0.0.0.0
+discovery.seed_hosts: ["efk-1", "efk-2","efk-3"]
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+xpack.security.http.ssl:
+  enabled: false
+  keystore.path: certs/http.p12
+xpack.security.transport.ssl:
+  enabled: false
+  verification_mode: certificate
+  keystore.path: certs/transport.p12
+  truststore.path: certs/transport.p12
+http.host: 0.0.0.0
+
+# 启动服务
+systemctl enable --now elasticsearch
+~~~
+
+
+
+### kibana
+
+
+
+#### 安装
+
+下载地址：[https://www.elastic.co/cn/downloads/past-releases/kibana-8-15-0](https://www.elastic.co/cn/downloads/past-releases#kibana)
+
+安装的版本需要和 elasticsearch 版本一致。
+
+下载 RPM 包，并安装。
+
+~~~shell
+wget https://artifacts.elastic.co/downloads/kibana/kibana-8.15.0-x86_64.rpm
+yum localinstall kibana-8.15.0-x86_64.rpm
+~~~
+
+
+
+#### 部署
+
+~~~shell
+[root@ela-1 ~]# egrep -v "^$|^#" /etc/kibana/kibana.yml
+server.host: "0.0.0.0"
+server.name: "kibana-node"
+elasticsearch.hosts: ["http://efk-1:9200","http://efk-2:9200","http://efk-3:9200"]
+logging:
+  appenders:
+    file:
+      type: file
+      fileName: /var/log/kibana/kibana.log
+      layout:
+        type: json
+  root:
+    appenders:
+      - default
+      - file
+pid.file: /run/kibana/kibana.pid
+i18n.locale: "zh-CN"		# Internationalization 软件的多语言化
+~~~
+
+
+
+
+
+### filebeat
+
+
+
+#### 安装
+
+下载地址：https://www.elastic.co/cn/downloads/past-releases/filebeat-8-15-0
+
+下载 RPM 包，并安装。
+
+~~~shell
+wget https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-8.15.0-x86_64.rpm
+yum localinstall filebeat-8.15.0-x86_64.rpm
+~~~
 
 
 
@@ -89,9 +244,29 @@
 
 
 
+#### input
 
 
 
+~~~shell
+filebeat.inputs:
+- type: stdin
+output.console:
+  pretty: true
+~~~
 
+#### output
 
+##### index
+
+~~~yaml
+output.elasticsearch:
+  index: "filebeat-efk-%{+yyyy.MM.dd}" 
+  hosts: ["http://localhost:9200"]
+
+# 设置索引生命周期，如果 output 使用 index 字段，必须要关闭，否则 index 字段无效。
+setup.ilm.enabled: false
+setup.template.name: "filebeat"
+setup.template.pattern: "filebeat*"
+~~~
 
