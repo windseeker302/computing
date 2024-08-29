@@ -221,6 +221,20 @@ i18n.locale: "zh-CN"		# Internationalization 软件的多语言化
 
 
 
+> 集群状态颜色：
+>
+>  red:
+>
+>    集群部分主分片无法访问。
+>
+>  yellow：
+>
+>    集群的部分副本分片无法访问。
+>
+>  green：
+>
+>    集群主分片和副本分片可以访问。
+
 
 
 ### filebeat
@@ -246,7 +260,7 @@ yum localinstall filebeat-8.15.0-x86_64.rpm
 
 #### input
 
-
+类型
 
 ~~~shell
 filebeat.inputs:
@@ -254,6 +268,8 @@ filebeat.inputs:
 output.console:
   pretty: true
 ~~~
+
+
 
 #### output
 
@@ -266,7 +282,55 @@ output.elasticsearch:
 
 # 设置索引生命周期，如果 output 使用 index 字段，必须要关闭，否则 index 字段无效。
 setup.ilm.enabled: false
+# 模板名称
 setup.template.name: "filebeat"
+# 模板模式
 setup.template.pattern: "filebeat*"
 ~~~
+
+
+
+##### indices
+
+~~~shell
+output.elasticsearch:
+  hosts: ["http://localhost:9200"]
+  indices:
+    - index: "warning-%{[agent.version]}-%{+yyyy.MM.dd}"
+      when.contains:
+        message: "WARN"
+    - index: "error-%{[agent.version]}-%{+yyyy.MM.dd}"
+      when.contains:
+        message: "ERR"
+~~~
+
+
+
+##### 分片和副本
+
+~~~shell
+output.elasticsearch:
+  index: "filebeat-efk-%{+yyyy.MM.dd}" 
+  hosts: ["http://localhost:9200"]
+
+setup.ilm.enabled: false
+setup.template.name: "filebeat"
+setup.template.pattern: "filebeat*"
+# 覆盖已有的索引模板
+setup.template.overwrite: false
+# 配置索引模板
+setup.template.settings:
+  # 设置模板分片数量
+  index.number_of_shards: 3
+  # 设置模板副本分片数量
+  index.number_of_replicas: 2
+~~~
+
+
+
+> 注意：
+>
+>   分片数量配置后不可以修改。
+>
+>   副本数量配置后可以修改。
 
