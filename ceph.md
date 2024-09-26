@@ -291,9 +291,19 @@ Fri Jun  3 17:45:29 CST 2022
 
 #### 管理 osd
 
+> 注意：在使用方面，cephadm 提供了许多命令，可用于部署和管理 Ceph 集群。其中一些最常用的命令包括：
+>
+> ceph orch apply：此命令用于将配置应用于 Ceph 集群。它可用于部署新服务、更新现有服务或删除不再需要的服务。
+> ceph orch ls：此命令用于列出当前在 Ceph 集群中运行的服务。
+> ceph orch ps：此命令用于列出当前在 Ceph 集群中运行的服务的状态。
+> ceph orch rm：此命令用于从 Ceph 集群中删除服务。
+> ceph orch upgrade：此命令用于将 Ceph 集群升级到新版本。
+
 ~~~shell
 # 将所有主机上的硬盘添加为OSD
 $ ceph orch apply osd --all-available-devices
+# 使用 ceph-deploy 添加 OSD,示例：
+$ ceph-deploy osd create ceph1 --data /dev/sdb
 
 # 通过ceph osd stat命令检查
 $ ceph osd stat
@@ -433,12 +443,19 @@ $ ceph orch host rm ceph02.novalocal
 - 修改资源池
 
   ~~~shell
-  # 根据官方推荐的范围，PG数量建议为256个，因此使用以下命令将PG数调整为256
   $ ceph osd pool set test pg_num 256
   
   # 修改 min_size 它决定了在Ceph集群中存储对象时最小的副本数量。默认为2
   $ ceph osd pool set test min_size 1
   ~~~
+
+  在创建Pool资源池的时候一定要指定pg_num和pgp_num参数，因为Ceph集群不能自动计算PG的数量。
+
+  **官方建议的PG使用数量：**
+
+  - 集群中小于5个OSD，则设置PG的数量为128。
+  - 集群有5-10个OSD时，设置PG的数量为512。
+  - 集群中有10-50个OSD时，设置PG的数量为1024.
 
   
 
@@ -447,6 +464,18 @@ $ ceph orch host rm ceph02.novalocal
   ~~~shell
   $ rados -p test_rbd put hosts /etc/hosts
   $ rados -p test_rbd ls
+  ~~~
+
+  
+
+- 为资源池设置应用模式
+
+  其实就是为资源池设置一个分类，有rbd、rgw、cephfs三种。
+
+  命令格式：`ceph osd pool application enable {pool_name} rbd`
+
+  ~~~shell
+  ceph osd pool application enable ceph-pool-1 rbd
   ~~~
 
   
@@ -473,6 +502,14 @@ $ ceph orch host rm ceph02.novalocal
   
   # 如果上传的对象超过五个
   $ ceph health detail 		# 会发现一个报错
+  ~~~
+
+
+
+- 获取池值
+
+  ~~~shell
+  ceph osd pool get {pool-name} {key}
   ~~~
 
   
@@ -585,8 +622,6 @@ block/rbd2	id=block,keyring=/etc/ceph/ceph.client.block.keyring
 # 将rbdmap服务设置为开机自启动
 $ systemctl enable rbdmap
 ~~~
-
-
 
 
 
