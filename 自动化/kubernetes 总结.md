@@ -1385,7 +1385,7 @@ NAME           READY   UP-TO-DATE   AVAILABLE   AGE
 nginx-deploy   2/2     2            2           4h14m
 ~~~
 
-![image-20240106171849538](picture/image-20240106171849538.png)
+![image-20240106171849538](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20240106171849538.png)
 
 ##### 回滚
 

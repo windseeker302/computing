@@ -1420,7 +1420,12 @@ usage: git [--version] [--help] [-c name=value]
 
 - switch：创建并进入该分支。
 
-  
+示例：
+
+~~~shell
+~~~
+
+
 
 #### 代理
 
@@ -1467,8 +1472,10 @@ git config --global --unset https.proxy
 ```shell
 vim ~/.ssh/config
 Host github.com
-    User git
-    ProxyCommand nc -X connect -x 127.0.0.1:7890 %h %p
+        Hostname ssh.github.com
+        Port 443
+        User git
+        ProxyCommand nc -v -x 127.0.0.1:7890 %h %p
 ```
 
 

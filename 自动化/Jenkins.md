@@ -165,7 +165,9 @@ docker run   -u root   -d   -p 8080:8080   -p 50000:50000   -v jenkins-data:/var
 >
 > 参考文档：https://blog.csdn.net/G_whang/article/details/131982215
 
-
+> 坑：更换国内源，也是没法安装插件，原因是：上方的源（链接）是最新版的jenkins源，jenkins不会识别当前版本，下载插件的时候默认使用的是最新版的，更换与 jenkins 相同版本的源就可以了。
+>
+> 清华源：https://mirrors.tuna.tsinghua.edu.cn/jenkins/updates/
 
 
 
@@ -177,25 +179,172 @@ docker run   -u root   -d   -p 8080:8080   -p 50000:50000   -v jenkins-data:/var
 
 #### 方法二：webhook 
 
-打开项目仓库设置，打开 webhooks
+1.打开项目仓库设置，添加 webhooks。
 
 ![image-20240320200045296](picture/image-20240320200045296.png)
 
 
 
-添加新的 webhook
+2.创建 webhook，URL填 jenkins 服务器的地址，加上后缀(/github-webhook/)，最后的斜杠必须带。
 
 ![image-20240320211359680](picture/image-20240320211359680.png)
 
 
 
-在 gitlab 上创建 access token
+3.在 gitlab 上创建 access token，获取令牌，拥有获取仓库和 webhooks 的权限。
 
 ![image-20240320195943306](picture/image-20240320195943306.png)
+
+4.在 jenkins 开启 webhooks，不同的仓库有不同的插件，下图是 gitee的。
+
+![image-20240924201046171](Jenkins.assets/image-20240924201046171.png)
+
+## 插件配置
+
+### 更换国内源，下载插件
+
+Dashboard --> 系统管理 --> 插件管理 --> Advanced settings，在 https://mirrors.tuna.tsinghua.edu.cn/jenkins/updates/ 找到自己jenkins 版本，填上这个 URL 即可。
+
+![image-20240925105227569](Jenkins.assets/image-20240925105227569.png)
+
+### 离线下载
+
+- .hpi格式
+
+  1.hpi格式需在官方网站[传送门](https://plugins.jenkins.io/)上下载，输入需要下载的插件。
+
+  ![image-20240925103901984](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20240925103901984.png)
+
+  2.在插件里会有 Document 文档，Release 发布的版本，lssues 问题，Dependencies 依赖，health score 健康得分，我们可以选择Release。
+
+  ![image-20240925103939023](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20240925103939023.png)
+
+  3.网站中会有两种下载方式，一种CLI，一种本地下载，我们找到适合的版本，把 direct link 粘贴，用 wget 下载，就可以了。
+
+  ~~~shell
+  root@mi-easytime:/opt# wget https://updates.jenkins.io/download/plugins/gitee/1.2.7/gitee.hpi
+  ~~~
+
+  4.导入，Dashboard --> 系统管理 --> 插件管理 --> Advanced settings，选择下载的 .hpi文件，如果你的网络没问题的情况下，可以直接选择URL。
+
+  ![image-20240925104803449](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20240925104803449.png)
+
+  
+
+- .jpi格式
+
+  直接将jpi文件放入Jenkins的plugins文件夹下（rpm安装的jenkins，路径是：/var/lib/jenkins/plugins/），然后重启Jenkins即可。
+
+  用这种方式既可以批量安装插件，安装时又可以忽视插件之间的关联性。若依赖的插件不存在或者存在版本问题，则重启之后会在Manage Jenkins中进行提示，根据提示逐一解决问题即可。
+
+  ~~~shell
+  root@mi-easytime:/opt# cd /var/lib/docker/volumes/jenkins-data/_data
+  root@mi-easytime:/var/lib/docker/volumes/jenkins-data/_data/plugins# ls
+  ace-editor                                                 display-url-api.jpi                               pipeline-build-step.jpi.pinned
+  ace-editor.jpi                                             display-url-api.jpi.pinned                        pipeline-build-step.jpi.version_from_image
+  ace-editor.jpi.pinned                                      display-url-api.jpi.version_from_image            pipeline-github-lib
+  ace-editor.jpi.version_from_image                          durable-task                                      pipeline-github-lib.jpi
+  ant                                                        durable-task.bak                                  pipeline-graph-analysis
+  ~~~
+
+  
+
+## 实战 Gitee 配置 jenkins Webhook
+
+### 0.环境
+
+- 系统版本
+
+  ~~~shell
+  root@mi-easytime:/opt# uname -a
+  Linux mi-easytime 6.1.0-25-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.106-3 (2024-08-26) x86_64 GNU/Linux 
+  ~~~
+
+  
+
+- jenkins版本
+  - JENKINS_VERSION=2.346.3
+
+​	
+
+### 1.插件安装
+
+1.在可用插件中查找 `gitee`，这里已经下载好了，在 installed plugins 中显示。
+
+![image-20240923195926542](Jenkins.assets/image-20240923195926542.png)
+
+![image-20240923195847041](Jenkins.assets/image-20240923195847041.png)
+
+### 2.插件配置
+
+1. 前往 Jenkins -> Manage Jenkins -> Configure System -> Gitee Configuration -> Gitee connections
+2. 在 `Connection name` 中输入 `Gitee` 或者你想要的名字
+3. `Gitee host URL` 中输入Gitee完整 URL地址： `https://gitee.com` （Gitee私有化客户输入部署的域名），如“https://gitee.com/ws203/share.git”
+4. Credentials` 中如还未配置Gitee APIV5 私人令牌，点击 `Add` - > `Jenkins
+   1. `Domain` 选择 `Global credentials`
+   2. `Kind` 选择 `Gitee API Token`
+   3. `Scope` 选择你需要的范围
+   4. `Gitee API Token` 输入你的Gitee私人令牌，获取地址：https://gitee.com/profile/personal_access_tokens
+   5. `ID`, `Descripiton` 中输入你想要的 ID 和描述即可。
+5. `Credentials` 选择配置好的 Gitee APIV5 Token
+6. 点击 `Advanced` ，可配置是否忽略 SSL 错误（视您的Jenkins环境是否支持），并可设置链接测超时时间（视您的网络环境而定）
+7. 点击 `Test Connection` 测试链接是否成功，如失败请检查以上 3，5，6 步骤。
+
+![image-20240925110914002](Jenkins.assets/image-20240925110914002.png)
+
+>  坑：测试失败也没关系，后续操作不影响。
+>
+
+### 3.创建流水线（Pipeline）
+
+新建任务。
+
+![image-20240925111135841](Jenkins.assets/image-20240925111135841.png)
+
+### 4.任务全局配置
+
+需要选择前一步中的Gitee链接。前往某个任务（如'Gitee Test'）的 Configure -> General，Gitee connection 中选择前面所配置的Gitee链接，如图：
+
+![image-20240925154035722](Jenkins.assets/image-20240925154035722.png)
+
+可在 Manage Jenkins -> Configure System -> 全局属性 ，设置环境变量。如运行 shell 可以借助 jenkins 中的环境变量进行使用。
+
+### 5.源代码管理配置
+
+前往某个任务（如'Gitee Test'）的 Configure -> Source Code Management 选项卡
+
+1. 点击 *Git*
+2. 输入你的仓库地址，例如 `git@your.gitee.server:gitee_group/gitee_project.git`
+3. 凭据Credentials 中请输入 git 仓库 https 地址对应的用户名密码凭据，或者 ssh 对应的 ssh key 凭据，注意 Gitee API Token 凭据不可用于源码管理的凭据，只用于 gitee 插件的 API 调用凭据。
+4. 选择分支，选择仓库的分支即可。
+
+配置如图所示：
+
+![image-20240925154144721](Jenkins.assets/image-20240925154144721.png)
+
+### 6.触发器配置
+
+选择 Gitee webhook 触发构建。默认设置即可，将gitee webhook 密码生成一下。
+
+### 7.构建后步骤配置
+
+构建失败，仅为构建失败回评到Gitee。
+
+![image-20240925160126674](Jenkins.assets/image-20240925160126674.png)
+
+### 8.新建Gitee项目WebHook
+
+返回 gitee，选择仓库设置，选择 WebHooks 填写下图标红的内容后，点击添加按钮。
+
+![image-20240925155118805](Jenkins.assets/image-20240925155118805.png)
+
+文档：[Jenkins 插件 - Gitee.com](https://gitee.com/help/articles/4193#article-header0)
 
 
 
 ## 流水线（Pipeline）
 
-Groovy 脚本
+![image-20240925160552990](Jenkins.assets/image-20240925160552990.png)
+
+点击下方流水线语法可打开片段生成器。
 

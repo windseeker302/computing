@@ -60,9 +60,12 @@
 
 #### 提交容器副本使之成为一个新的镜像
 
-- docker commit -m="提交的描述信息" -a="作者" 容器ID 要创建的目标镜像名:[标签名]
+- docker commit -m="提交的描述信息" -a="作者" 容器ID 要创建的目标镜像名:[标签名]。
 
-
+- docker history [OPTIONS] IMAGE ：查看指定镜像的历史层信息。
+  - -H, --human: 以人类可读的格式显示镜像大小（默认启用）。
+  - --no-trunc: 显示完整的输出，不截断信息。
+  - -q, --quiet: 仅显示镜像 ID。
 
 ## 镜像
 
@@ -92,8 +95,6 @@ Status: Downloaded newer image for docker.io/tomcat:latest
 
 
 docker 镜像层都是只读的，容器层是可写的，当容器启动时，一个信的可写层被加载到镜像顶部。这一层通常被称为“容器层”，“容器层”之下的都叫“镜像层”。
-
-
 
 ## Dockerfile	
 
