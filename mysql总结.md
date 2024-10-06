@@ -2,12 +2,683 @@
 
 ## 简介
 
-## 索引
+### 概述
+
+数据库（database,DB），数据存储的仓库，数据是有组织的进行存储。
+
+数据库操作系统（Database Management System,DBMS），操纵和管理数据库的大型软件。
+
+SQL（Structured Query Language），操纵关系型数据库的编程语言，定义了一套操作关系型数据库统一标准。
+
+主流的关系型数据库管理系统：
+
+- Oracle：大型收费。
+- MySql：开源免费的中小型数据库。
+- SQLServer(Microsoft SQL Server)：微软公司中型数据库，收费。
+- PostgreSQl：开源免费的中小型数据库。
+- SQLite：嵌入式微型数据库，在安卓内置的数据库中，就用的SQLite。
+
+ 
+
+### 安装
+
+#### 版本
+
+MySQL 官方提供了两种不同的版本：
+
+- 社区版（Community）
+
+  免费，mysql不提供任何技术支持。
+
+- 商业版（Enterprise Edition）
+
+  收费，试用30天，官方提供技术支持。
+
+#### 下载
+
+下载地址：[MySQL :: MySQL Community Downloads](https://dev.mysql.com/downloads/)
 
 ## SQL
+
+### SQL通用语法
+
+1. SQL语句可以单行或多行书写，以分号结尾。
+2. SQL语句可以使用空格/缩进来增强语句的可读性。
+3. MySQL数据库的SQL语句不区分大小写，关键字建议使用大写。
+4. 注释：
+
+- 单行注释：--注释内容或#注释内容(MySQL特有) 
+- 多行注释：/\*注释内容*/
+
+### SQL分类
+
+DDL（Data Definition Language）：数据定义语言，用来定义数据库对象（数据库，表，字段）。
+
+DML（Data Manipulation Language）：数据操作语言，用来对数据库中的数据进行增删改。
+
+DQL（Data Query Language）：数据查询语言，用来查询数据库中表的记录。
+
+DCL（Data Control Language）：数据控制语言，用来控制数据库用户，控制数据库的访问权限。
+
+### DDL
+
+#### 数据库操作
+
+- 查询
+
+  查询所有数据库
+
+  ~~~sql
+  show DATABASES;
+  ~~~
+
+  
+
+  查询当前数据库
+
+  ~~~sql
+  select DATABASE();
+  ~~~
+
+  
+
+- 创建
+
+  ~~~sql
+  CREATE DATABASE [IF NOT EXISTS] 数据库名称 [DEFAULT CHARSET 字符集] [COLLATE 排列顺序];
+  ~~~
+
+  
+
+- 删除
+
+  ~~~sql
+  DROP DATABASE [IF EXISTS] 数据库名称;
+  ~~~
+
+  
+
+- 使用
+
+  ~~~sql
+  USE 数据库名称;
+  ~~~
+
+
+
+#### 表操作
+
+##### 查询
+
+- 查询当前所有表
+
+  ~~~sql
+  SHOW TABLES;
+  ~~~
+
+  
+
+- 查询表结构
+
+  ~~~sql
+  DESC 表名;
+  ~~~
+
+  
+
+- 查询指定表的建表语句
+
+  ~~~sql
+  SHOW CREATE TABLE 表名;
+  ~~~
+
+
+
+##### 创建
+
+- 创建
+
+  ~~~sql
+  CREATE TABLE 表名(
+  	字段1 字段1类型 [COMMENT 字段1注释],
+      字段2 字段2类型 [COMMENT 字段2注释],
+      字段3 字段3类型 [COMMENT 字段3注释],
+      ......
+      字段n 字段n类型 [COMMENT 字段n注释],
+  )[COMMENT 表注释];
+  ~~~
+
+
+
+- 数据类型
+
+  MySQL中的数据类型有很多，主要分为三类：数值类型、字符串类型、日期时间类型。
+
+  数值类型：
+
+  | 类型         | 大小                                     | 范围（有符号）                                               | 范围（无符号）                                               | 用途           |
+  | :----------- | :--------------------------------------- | :----------------------------------------------------------- | :----------------------------------------------------------- | :------------- |
+  | TINYINT      | 1 Bytes                                  | (-128，127)                                                  | (0，255)                                                     | 小整数值       |
+  | SMALLINT     | 2 Bytes                                  | (-32 768，32 767)                                            | (0，65 535)                                                  | 大整数值       |
+  | MEDIUMINT    | 3 Bytes                                  | (-8 388 608，8 388 607)                                      | (0，16 777 215)                                              | 大整数值       |
+  | INT或INTEGER | 4 Bytes                                  | (-2 147 483 648，2 147 483 647)                              | (0，4 294 967 295)                                           | 大整数值       |
+  | BIGINT       | 8 Bytes                                  | (-9,223,372,036,854,775,808，9 223 372 036 854 775 807)      | (0，18 446 744 073 709 551 615)                              | 极大整数值     |
+  | FLOAT        | 4 Bytes                                  | (-3.402 823 466 E+38，-1.175 494 351 E-38)，0，(1.175 494 351 E-38，3.402 823 466 351 E+38) | 0，(1.175 494 351 E-38，3.402 823 466 E+38)                  | 单精度浮点数值 |
+  | DOUBLE       | 8 Bytes                                  | (-1.797 693 134 862 315 7 E+308，-2.225 073 858 507 201 4 E-308)，0，(2.225 073 858 507 201 4 E-308，1.797 693 134 862 315 7 E+308) | 0，(2.225 073 858 507 201 4 E-308，1.797 693 134 862 315 7 E+308) | 双精度浮点数值 |
+  | DECIMAL      | 对DECIMAL(M,D) ，如果M>D，为M+2否则为D+2 | 依赖于M和D的值                                               | 依赖于M和D的值                                               | 小数值         |
+
+  字符串类型：
+
+  | 类型       | 大小                  | 用途                            |
+  | :--------- | :-------------------- | :------------------------------ |
+  | CHAR       | 0-255 bytes           | 定长字符串                      |
+  | VARCHAR    | 0-65535 bytes         | 变长字符串                      |
+  | TINYBLOB   | 0-255 bytes           | 不超过 255 个字符的二进制字符串 |
+  | TINYTEXT   | 0-255 bytes           | 短文本字符串                    |
+  | BLOB       | 0-65 535 bytes        | 二进制形式的长文本数据          |
+  | TEXT       | 0-65 535 bytes        | 长文本数据                      |
+  | MEDIUMBLOB | 0-16 777 215 bytes    | 二进制形式的中等长度文本数据    |
+  | MEDIUMTEXT | 0-16 777 215 bytes    | 中等长度文本数据                |
+  | LONGBLOB   | 0-4 294 967 295 bytes | 二进制形式的极大文本数据        |
+  | LONGTEXT   | 0-4 294 967 295 bytes | 极大文本数据                    |
+
+  日期时间类型：
+
+  | DATE      | 3    | 1000-01-01/9999-12-31                                        | YYYY-MM-DD          | 日期值                   |
+  | --------- | ---- | ------------------------------------------------------------ | ------------------- | ------------------------ |
+  | TIME      | 3    | '-838:59:59'/'838:59:59'                                     | HH:MM:SS            | 时间值或持续时间         |
+  | YEAR      | 1    | 1901/2155                                                    | YYYY                | 年份值                   |
+  | DATETIME  | 8    | '1000-01-01 00:00:00' 到 '9999-12-31 23:59:59'               | YYYY-MM-DD hh:mm:ss | 混合日期和时间值         |
+  | TIMESTAMP | 4    | '1970-01-01 00:00:01' UTC 到 '2038-01-19 03:14:07' UTC结束时间是第 **2147483647** 秒，北京时间 **2038-1-19 11:14:07**，格林尼治时间 2038年1月19日 凌晨 03:14:07 | YYYY-MM-DD hh:mm:ss | 混合日期和时间值，时间戳 |
+
+##### 修改
+
+- 添加字段
+
+  ~~~sql
+  ALTER TABLE 表名 ADD 字段名 类型(长度) [comment 注释] [约束] [after 字段名];
+  ~~~
+
+  
+
+- 修改数据类型
+
+  ~~~sql
+  ALTER TABLE 表名 MODIFY 字段名 新数据类型(长度);
+  ~~~
+
+  
+
+- 修改字段名和字段类型
+
+  ~~~sql
+  ALTER TABLE 表名 CHANGE 旧字段名 新字段名 类型(长度) [comment 注释] [约束];
+  ~~~
+
+  
+
+- 删除字段
+
+  ~~~sql
+  ALTER TABLE 表名 DROP 字段名;
+  ~~~
+
+
+
+- 修改表名
+
+  ~~~sql
+  ALTER TABLE 表名 RENAME to 新表名;
+  ~~~
+
+
+
+##### 删除
+
+- 删除表
+
+  ~~~sql
+  DROP TABLE [IF NOT EXISTS] 表名;
+  ~~~
+
+  
+
+- 删除指定表，并重新创建该表
+
+  ~~~sql
+  TRUNCATE TABLE 表名;
+  ~~~
+
+  
+
+### DML
+
+#### 添加数据（INSERT）
+
+- 给指定字段添加数据
+
+  ~~~sql
+  INSERT INTO 表名(字段名1,字段名2,...) VALUES(值1,值2,...);
+  ~~~
+
+  
+
+- 给全部字段添加数据
+
+  ~~~sql
+  INSERT INTO 表名 VALUES(值1,值2,...);
+  ~~~
+
+  
+
+- 批量添加数据
+
+  ~~~sql
+  # 指定字段添加数据
+  INSERT INTO 表名(字段名1,字段名2,...) VALUES(值1,值2,...),(值1,值2,...),(值1,值2,...);
+  # 全部字段添加数据
+  INSERT INTO 表名 VALUES(值1,值2,...),(值1,值2,...),(值1,值2,...);
+  ~~~
+
+  
+
+> 注意：
+>
+> - 插入数据时，指定的字段顺序需要与值的顺序是一一对应的。
+> - 字符串和日期型数据应该包含在引号中。
+> - 插入的数据大小，应该在字段的规定范围内。
+
+#### 修改数据（UPDATE）
+
+~~~sql
+UPDATE 表名 SET 字段名1=值1,字段名2=值2,... [WHERE 条件];
+~~~
+
+
+
+> 注意：修改语句的条件可以有，也可以没有，如果没有条件，则会修改整张表的所有数据。
+
+
+
+#### 删除数据（DELETE）
+
+~~~sql
+DELETE FROM 表名 [WHERE 条件];
+~~~
+
+
+
+> 注意：
+>
+> - DELETE语句的条件可以有，也可以没有，如果没有条件，则会删除整张表的所有数据。 
+> - DELETE语句不能删除某一个字段的值(可以使用UPDATE)。
+
+### DQL
+
+语法
+
+~~~sql
+SELECT
+	字段列表
+FROM
+	表名列表
+WHERE
+	条件列表
+GROUP BY
+	分组列表
+HAVING
+	分组条件
+ORDER BY
+	排序字段
+LIMIT
+	分页参数
+~~~
+
+
+
+#### 基础查询
+
+- 查询多个字段
+
+  ~~~sql
+  SELECT 字段1,字段2,... FROM 表名;
+  ~~~
+
+  
+
+- 查询返回所有字段
+
+  ~~~sql
+  SELECT * FROM 表名;
+  ~~~
+
+  
+
+- 设置别名
+
+  ~~~sql
+  SELECT 字段1 [AS 别名1],字段2 [AS 别名2],... FROM 表名;
+  ~~~
+
+
+
+- 去除重复记录
+
+  ~~~sql
+  SELECT DISTINCT 字段列表 FROM 表名;
+  ~~~
+
+  
+
+#### 条件查询（WHERE）
+
+1. 语法：
+
+   ~~~sql
+   SELECT 字段列表 FROM 表名 WHERE 列表条件;
+   ~~~
+
+   
+
+2. 条件
+
+   A=10 B=20
+
+   | 操作符 | 描述                                                         | 实例                 |
+   | :----- | :----------------------------------------------------------- | :------------------- |
+   | =      | 等号，检测两个值是否相等，如果相等返回true                   | (A = B) 返回false。  |
+   | <>, != | 不等于，检测两个值是否相等，如果不相等返回true               | (A != B) 返回 true。 |
+   | >      | 大于号，检测左边的值是否大于右边的值, 如果左边的值大于右边的值返回true | (A > B) 返回false。  |
+   | <      | 小于号，检测左边的值是否小于右边的值, 如果左边的值小于右边的值返回true | (A < B) 返回 true。  |
+   | >=     | 大于等于号，检测左边的值是否大于或等于右边的值, 如果左边的值大于或等于右边的值返回true | (A >= B) 返回false。 |
+   | <=     | 小于等于号，检测左边的值是否小于或等于右边的值, 如果左边的值小于或等于右边的值返回true | (A <= B) 返回 true。 |
+
+简单实例 
+
+1. 等于条件：
+
+```sql
+SELECT * FROM users WHERE username = 'test';
+```
+
+2. 不等于条件：
+
+```sql
+SELECT * FROM users WHERE username != 'runoob';
+```
+
+3. 大于条件:
+
+```sql
+SELECT * FROM products WHERE price > 50.00;
+```
+
+4. 小于条件:
+
+```sql
+SELECT * FROM orders WHERE order_date < '2023-01-01';
+```
+
+5. 大于等于条件:
+
+```sql
+SELECT * FROM employees WHERE salary >= 50000;
+```
+
+6. 小于等于条件:
+
+```sql
+SELECT * FROM students WHERE age <= 21;
+```
+
+7. 组合条件（AND、OR）:
+
+```sql
+SELECT * FROM products WHERE category = 'Electronics' AND price > 100.00;
+
+SELECT * FROM orders WHERE order_date >= '2023-01-01' OR total_amount > 1000.00;
+```
+
+8. 模糊匹配条件（LIKE）:
+
+```sql
+SELECT * FROM customers WHERE first_name LIKE 'J%';
+```
+
+9. IN 条件:
+
+```sql
+SELECT * FROM countries WHERE country_code IN ('US', 'CA', 'MX');
+```
+
+10. NOT 条件:
+
+```sql
+SELECT * FROM products WHERE NOT category = 'Clothing';
+```
+
+11. BETWEEN 条件:
+
+```sql
+SELECT * FROM orders WHERE order_date BETWEEN '2023-01-01' AND '2023-12-31';
+```
+
+12. IS NULL 条件
+
+```sql
+SELECT * FROM employees WHERE department IS NULL;
+```
+
+13. IS NOT NULL 条件:
+
+```sql
+SELECT * FROM customers WHERE email IS NOT NULL;
+```
+
+如果我们想在 MySQL 数据表中读取指定的数据，WHERE 子句是非常有用的。
+
+使用主键来作为 WHERE 子句的条件查询是非常快速的。
+
+如果给定的条件在表中没有任何匹配的记录，那么查询不会返回任何数据。
+
+
+
+#### 聚合函数（count，max，min，avg，sum）
+
+将一列数据作为一个整体，进行纵向计算。
+
+常见聚合函数:
+
+| 函数  | 功能     |
+| ----- | -------- |
+| count | 统计数量 |
+| max   | 最大值   |
+| min   | 最小值   |
+| avg   | 平均值   |
+| sum   | 求和     |
+
+语法：
+
+~~~sql
+SELECT 聚合函数(字段列表) FROM 表名;
+~~~
+
+
+
+> 注意：null值不参与所有聚合函数运算。
+
+#### 分组查询（GROUP BY）
+
+语法：
+
+~~~sql
+SELECT 字段列表 FROM 表名 [WHERE 条件] GROUP BY 分组字段名 [HAVING 分组后过滤条件];
+~~~
+
+> where 和 having 区别？
+>
+> - 执行时机不同：where 是分组之前进行过滤，不满足 where 条件，不参与分组；而having 是分组后对结果进行过滤。
+> - 判断条件不同：where 不能对聚合函数进行判断，而 having 可以。
+
+示例：
+
+1. 根据性别分组，统计男性员工数量和女性员工数量。
+
+   ~~~sql
+   select gender,count(*) from emp group by gender;
+   ~~~
+
+   
+
+2. 根据性别分区，统计男性员工和女性员工的平均年龄。
+
+   ~~~sql
+   select gender,avg(age) from emp group by gender;
+   ~~~
+
+   
+
+3. 查询年龄小于45的员工，并根据工作地址分组，获取员工数量大于等于3的工作地址。
+
+   ~~~sql
+   select * from emp where age < 45 group by workaddress;
+   ~~~
+
+使用 WITH ROLLUP
+
+WITH ROLLUP 可以实现在分组统计数据基础上再进行相同的统计（SUM,AVG,COUNT…）。
+
+例如我们将以上的数据表按名字进行分组，再统计每个人登录的次数：
+
+```sql
+mysql> SELECT name, SUM(signin) as signin_count FROM  employee_tbl GROUP BY name WITH ROLLUP;
++--------+--------------+
+| name   | signin_count |
++--------+--------------+
+| 小丽 |            2 |
+| 小明 |            7 |
+| 小王 |            7 |
+| NULL   |           16 |
++--------+--------------+
+4 rows in set (0.00 sec)
+```
+
+其中记录 NULL 表示所有人的登录次数。
+
+
+
+#### 排序查询（ORDER BY）
+
+语法：
+
+~~~sql
+SELECT 字段列表 FROM 表名 ORDER BY 字段1 排序方式1,字段2 排序方式2;
+~~~
+
+
+
+排序方式：
+
+- ASC：升序（默认值）
+- DESC：降序
+
+> 注意：如果是多字段排序，当第一个字段相同，才会根据第二个字段排序。
+
+
+
+#### 分页查询（LIMIT）
+
+语法：
+
+~~~sql
+SELECT 字段列表 FROM 表名 LIMIT 起始索引,查询记录数;
+~~~
+
+> 注意：
+>
+> - 起始索引1从0开始，起始索引=（查询页码-1）* 每页显示记录数。
+> - 分页查询是数据库的方言，不同的数据库有不同的实现，MySQL中是LIMIT。
+> - 如果查询的是第一页数据，起始索引可以省略，直接简写为limit10。
+
+#### 执行顺序
+
+编写顺序：
+
+~~~sql
+SELECT
+	字段列表
+FROM
+	表名列表
+WHERE
+	条件列表
+GROUP BY
+	分组字段列表
+HAVING
+	分组后条件列表
+ORDER BY
+	排序字段
+LIMIT
+	分页参数
+~~~
+
+执行顺序：
+
+~~~sql
+FROM
+	表名列表
+WHERE
+	条件列表
+GROUP BY
+	分组字段列表
+HAVING
+	分组后条件列表
+SELECT
+	字段列表
+ORDER BY
+	排序字段
+LIMIT
+	分页参数
+~~~
+
+
+
+### DCL
+
+
+
+## 图形化界面
+
+- sqlyog
+- Navicat
+- DataGrip
+
+
+
+## 函数
+
+## 约束
+
+## 多表查询
+
+## 事务
+
+
+
+## 索引
+
+
 
 ## 视图/存储过程/触发器
 
 ## 锁
 
 ## InnoDB引擎
+
+## 日志
+
+## 主从复制
+
+## 读写分离
+
+## 分库分表
+
