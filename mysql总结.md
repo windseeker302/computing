@@ -644,17 +644,207 @@ LIMIT
 
 ### DCL
 
+#### 用户管理
 
+- 查询用户
+
+  ~~~sql
+  USE mysql;
+  SELECT * FROM user;
+  ~~~
+
+  
+
+- 创建用户
+
+  ~~~sql
+  CREATE USER '用户名@主机名' IDENTIFIED BY '密码';
+  ~~~
+
+  
+
+- 修改用户密码
+
+  ~~~sql
+  ALTER USER '用户名@主机名' IDENTIFIED WITH mysql_native_password BY '密码';
+  ~~~
+
+  
+
+- 删除用户
+
+  ~~~sql
+  DROP USER '用户名@主机名';
+  ~~~
+
+  
+
+#### 权限控制
+
+- 查询权限
+
+  ~~~sql
+  SHOW GRANTS FOR '用户名@主机名';
+  ~~~
+
+  
+
+- 授予权限
+
+  ~~~sql
+  GRANT 权限列表 ON 数据库名.表名 TO '用户名@主机名';
+  ~~~
+
+  
+
+- 撤销权限
+
+  ~~~sql
+  REVOKE 权限列表 ON 数据库名.表名 FROM '用户名@主机名';
+  ~~~
+
+  
+
+  > 注意:
+  >
+  > - 多个权限之间，使用逗号分隔。
+  > - 授权时，数据库名和表名可以使用*进行通配，代表所有。
 
 ## 图形化界面
 
 - sqlyog
+  - 下载地址：https://sqlyog.en.softonic.com/
+
 - Navicat
+  - 下载地址：[Navicat | 下载 Navicat Premium 14 天免费 Windows、macOS 和 Linux 的试用版](https://navicat.com.cn/download/navicat-premium)
+
 - DataGrip
+  - 下载地址：https://www.jetbrains.com/datagrip/download/
+
 
 
 
 ## 函数
+
+`函数 `是指一段可以直接被另一段程序调用的程序或代码。
+
+使用函数：
+
+~~~sql
+SELECT 函数(参数);
+~~~
+
+
+
+### 字符串函数
+
+- 常用字符串函数
+
+  | 函数                     | 功能                                                      |
+  | ------------------------ | --------------------------------------------------------- |
+  | CONCAT(S1,S2,...Sn)      | 字符串拼接，将S1，S2，...Sn拼接成一个字符串               |
+  | LOWER(str)               | 将字符串 str 全部转为小写                                 |
+  | UPPER(str)               | 将字符串 str 全部转为大写                                 |
+  | LPAD(str,n,pad)          | 左填充，用字符串pad对str的左边进行填充，达到n个字符串长度 |
+  | RPAD(str,n,pad)          | 右填充，用字符串pad对str的右边进行填充，达到n个字符串长度 |
+  | TRIM(str)                | 去掉字符串头和尾的空格                                    |
+  | SUBSTRING(str,start,len) | 返回从字符串str从start位置起的len个长度的字符串           |
+
+  
+
+- 示例
+
+  由于业务需求变更，企业员工的工号，统一为5位数，目前不足5位数的全部在前面补0。比如：1号员工的工号应该为00001。
+
+  ~~~sql
+  update tmp set workno = LPAD(workno,5,'0');
+  ~~~
+
+  
+
+### 数值函数
+
+- 常用数值函数：
+
+  | 函数       | 功能                           |
+  | ---------- | ------------------------------ |
+  | CEIL(x)    | 向上取整                       |
+  | FLOOR(x)   | 向下取整                       |
+  | MOD(x,y)   | 返回x/y的模(取余)              |
+  | RAND()     | 返回0~1的随机数                |
+  | ROUND(x,y) | 求参数x的四舍五入，保留y位小数 |
+
+  
+
+- 示例：
+
+  通过数据库的函数，生成一个六位数的随机验证码。
+
+  ~~~sql
+  select lpad(round(rand()*1000000,0),6,'0');
+  ~~~
+
+  
+
+### 日期函数
+
+- 常用的日期函数：
+
+  | 函数                              | 功能                                              |
+  | --------------------------------- | ------------------------------------------------- |
+  | CURDATE()                         | 返回当前日期                                      |
+  | CURTIME()                         | 返回当前时间                                      |
+  | NOW()                             | 返回当前日期和时间                                |
+  | YEAR(date)                        | 获取指定date的年份                                |
+  | MONTH(date)                       | 获取指定date的月份                                |
+  | DAY(date)                         | 获取指定date的日期                                |
+  | DATE_ADD(date,INTERVAL expr type) | 返回一个日期/时间值加上一个时间间隔expr后的时间值 |
+  | DATEDIFF(date1,date2)             | 返回起始时间date1和结束时间date2之间的天数        |
+
+  
+
+- 示例：
+
+  查询所有员工的入职天数，并根据入职天数倒序排序。
+
+  ~~~sql
+  select name,datediff(curdate(),entrydate) AS 'entrydays' from emp order by entrydays desc;
+  ~~~
+
+  
+
+### 流程函数
+
+流程函数也是很常用的一类函数，可以在SQL语句中实现条件筛选，从而提高语句的效率。
+
+常用的流程函数：
+
+| 函数                                                       | 功能                                                     |
+| ---------------------------------------------------------- | -------------------------------------------------------- |
+| IF(value,t,f)                                              | 如果value位true，则返回t，否则返回f                      |
+| IFNULL(value1,value2)                                      | 如果value1不为null，返回value1，否则返回value2           |
+| CASE WHEN [val1] THEN [res1] ... ELSE [default] END        | 如果val1为true，返回resl，..否则返回default默认值        |
+| CASE [expr] WHEN [val1] THEN [res1] ... ELSE [default] END | 如果expr的值等于val1，返回res1，...否则返回default默认值 |
+
+示例：
+
+统计班级各个学员的成绩，展示的规则如下：
+
+- \>= 85，展示优秀 
+- \>= 60，展示及格
+- 否则，展示不及格
+
+~~~sql
+select 
+	id,
+	name,
+	(case when math >= 85 then '优秀' when math >= 60 then '及格' else '不及格' end ) '数学',
+	(case when english >= 85 then '优秀' when english >= 60 then '及格' else '不及格' end ) '英语',
+	(case when chinese >= 85 then '优秀' when chinese >= 60 then '及格' else '不及格' end ) '语文',
+from score;
+~~~
+
+
 
 ## 约束
 
