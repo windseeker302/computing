@@ -1023,9 +1023,120 @@ select a.name,b.name from user a left join user b on a.id = b.managerid;
 
 
 
+### 链接查询
+
+对于union查询，就是把多次查询的结果合并起来，形成一个新的查询结果集。
+
+~~~sql
+SELECT 字段列表 FROM 表A
+union [all]
+SELECT 字段列表	FROM 表B;
+~~~
+
+
+
+> 注意：
+>
+> - 对于联合查询的多张表的列数必须保持一致，字段类型也需要保持一致。
+> - union all会将全部的数据直接合并在一起，union会对合并之后的数据去重。
+
 ### 子查询
 
+- SQL语句中嵌套SELECT语句，称为嵌套查询，又称子查询。
+
+  ~~~sql
+  SELECT 字段列表 FROM t1 WHERE column = (SELECT column1 FROM t2);
+  ~~~
+
+  
+
+  > 注意：子查询外部查询的语句是 INSERT/UPDATE/SELECT的任何一个。
+
+- 根据子查询结果不同，分为：
+
+  - 标量子查询（子查询结果为单个值）
+  - 列子查询(子查询结果为一列)
+  - 行子查询（子查询结果为一行）
+  - 表子查询（子查询结果为多行多列）
+
+- 根据子查询位置，分为：WHERE之后、FROM之后、SELECT之后。
+
+#### 标量子查询
+
+子查询返回的结果是单个值（数字、字符串、日期等），最简单的形式，这种子查询成为标量子查询。
+
+常用的操作符：= <> < =< > =>
+
+示例：
+
+查询小王入职后的人员名单
+
+~~~sql
+# a.查询小王入职的日期
+select entrydate from emp where name = "小王";
+# b.查询制定入职日期后的人员名单
+select * from emp where entrydate > 2022-02-11;
+
+select * from emp where entrydate > (select entrydate from emp where name = "小王");
+~~~
+
+
+
+#### 列子查询
+
+子查询返回的结果是一列（可以是多行），这种子查询称为列子查询。
+
+常用的操作符：IN、NOTIN、ANY、SOME、ALL
+
+| 操作符 | 描述                                   |
+| ------ | -------------------------------------- |
+| IN     | 在指定的集合范围之内，多选一           |
+| NOT IN | 不在指定的集合范围内                   |
+| ANY    | 子查询返回列表，有任意一个满足即可     |
+| SOME   | 与ANY等同，使用SOME的地方都可以使用ANY |
+| ALL    | 子查询返回列表的所有值都必须要满足     |
+
+示例：
+
+查看研发部和总经办的所有员工信息
+
+~~~sql
+select * from user u left join dept de on u.dept_id = de.id where dept_id in (select id from dept where name ='研发部' or name='总经办') ;
+~~~
+
+
+
+查询比研发部其中一个人工资高的员工信息
+
+~~~sql
+select * from user where salary >= some (select salary from user where dept_id = (select id from dept where name='研发部'));
+~~~
+
+
+
+#### 行子查询
+
+子查询返回的结果是一行（可以是多列），这种子查询称为行子查询。	
+
+常用的操作符：=、<>、IN、NOT IN
+
+
+
+#### 表子查询
+
+示例：
+
+查询入职时间是"2006-07-01"之后的员工信息，以及部门信息：
+
+~~~sql
+select e.*,d.* from (select * from emp where emp.entrydate > "2006-07-01") e left join dept d on e.dept_id = d.id;
+~~~
+
+
+
 ### 多表查询案例
+
+
 
 
 
