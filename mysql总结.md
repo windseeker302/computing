@@ -1023,9 +1023,7 @@ select a.name,b.name from user a left join user b on a.id = b.managerid;
 
 
 
-123121231231231231
-
-### 子查询1231231
+### 子查询
 
 ### 多表查询案例
 

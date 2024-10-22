@@ -602,9 +602,6 @@ Python运维开发：基于Openstack Python SDK实现云主机创建
 完成后提交OpenStack Python运维开发环境 Controller节点的IP地址，用户名和密码提交。
 
 ~~~python
-# 1.执行 sdk_server_manager.py 脚本,成功创建云主机，计 0.5 分
-# 2.检查创建的云主机状态正确，计 0.5 分
-
 import json
 from openstack import connection
 server_ip = 'none'

@@ -236,9 +236,9 @@ Fri Jun  3 17:45:29 CST 2022
   # 查看当前目录，可以发现生产了一些文件
   $ ll
   总用量 16
-  -rw-rw-r-- 1 ceph ceph  292 12月 22 12:10 ceph.conf  # conf是ceph集群的配置文件
-  -rw-rw-r-- 1 ceph ceph 5083 12月 22 12:10 ceph-deploy-ceph.log # 日志
-  -rw------- 1 ceph ceph   73 12月 22 12:10 ceph.mon.keyring # 这个是ceph集群的密钥
+  -rw-rw-r-- 1 ceph ceph  292 12月 22 12:10 ceph.conf  	# conf是ceph集群的配置文件
+  -rw-rw-r-- 1 ceph ceph 5083 12月 22 12:10 ceph-deploy-ceph.log 	# 日志
+  -rw------- 1 ceph ceph   73 12月 22 12:10 ceph.mon.keyring 	# 这个是ceph集群的密钥
   
   # 3.配置 mon 节点
   # 如果单独部署 mon 节点，记得安装 ceph-mon。
@@ -262,9 +262,9 @@ Fri Jun  3 17:45:29 CST 2022
   
   # 4.配置 mgr 节点
   # 如果是独立的mgr节点服务器，记得检查是否安装了ceph-mgr包
-  yum install -y ceph-mgr
+  $ yum install -y ceph-mgr
   # 添加 mgr 节点
-  ceph-deploy mgr create ceph-node1 ceph-node2
+  $ ceph-deploy mgr create ceph-node1 ceph-node2
   
   # 5.检测
   $ ceph -s
@@ -285,7 +285,6 @@ Fri Jun  3 17:45:29 CST 2022
       pgs:     
   ~~~
 
-  
 
 
 
@@ -419,10 +418,135 @@ $ ceph orch apply prometheus --unmanaged=true
 $ ceph orch daemon rm <names>
 
 # 移除节点
-$ ceph orch host rm ceph02.novalocal
+$ ceph orch host rm ceph-2
 ~~~
 
 
+
+## 图形化管理（dashboard）
+
+Ceph mgr 是一个多插件(模块化)的组件，其组件可以单独的启用或关闭,以下为在 ceph-deploy 服务器操作：
+
+新版本需要安装 dashboard，而且必须安装在 mgr 节点，否则报错如下：
+
+```bash
+The following packages have unmet dependencies:
+ceph-mgr-dashboard : Depends: ceph-mgr (= 15.2.13-1~bpo10+1) but it is not going to be installed
+E: Unable to correct problems, you have held broken packages.
+```
+
+### 安装
+
+在 mgr 节点安装 dashboard plugin。
+
+~~~shell
+$ yum install ceph-mgr-dashboard
+~~~
+
+
+
+### 启动
+
+~~~shell
+# 查看ceph mgr module 帮助
+$ ceph mgr module -h
+# 列出所有 ceph mgr 模块
+$ ceph mgr module list
+{
+    "always_on_modules": [
+        "balancer",
+        "crash",
+        "devicehealth",
+        "orchestrator",
+        "pg_autoscaler",
+        "progress",
+        "rbd_support",
+        "status",
+        "telemetry",
+        "volumes"
+    ],
+    "enabled_modules": [    # 已经开启的模块，可以看出没有启动dashboard模块
+        "iostat",
+        "nfs",
+        "restful"
+    ],
+    "disabled_modules": [    # 已关闭的模块
+        {
+            "name": "alerts",
+            "can_run": true,    # 是否可以启用
+            "error_string": "",
+            "module_options": {
+                "interval": {
+                    "name": "interval",
+                    "type": "secs",
+                    "level": "advanced",
+# 启用dashboard模块
+$ ceph mgr module enable dashboard
+# 配置 dashboard 关闭SSL
+$ ceph config set mgr mgr/dashboard/ssl false
+~~~
+
+
+
+**配置方法一**：Ceph dashboard 可以只对 mgr1 节点进行开启设置
+
+```bash
+# 指定 dashboard 的监听地址为其中一个 mgr节点的ip
+cephadmin@ceph-deploy:~/ceph-cluster$ ceph config set mgr mgr/dashboard/ceph-mgr1/server_addr 172.16.100.38
+ 
+# 指定 dashboard 在 mgr1 节点上监听的端口为 9009
+cephadmin@ceph-deploy:~/ceph-cluster$ ceph config set mgr mgr/dashboard/ceph-mgr1/server_port 9009
+```
+
+ 
+
+**配置方法二（推荐）**：设置多个mgr监听，如果 mgr 1172.16.100.38 节点mgr服务宕机，则可以在其他 mgr 节点访问dashboard，做到 dashboard 的高可用
+
+```bash
+# 指定 dashboard 的监听地址为其中一个 mgr节点的ip
+cephadmin@ceph-deploy:~/ceph-cluster$ ceph config set mgr mgr/dashboard/server_addr 172.16.100.38
+ 
+# 指定 dashboard 的 在 mgr1 节点上监听的端口为 9009
+cephadmin@ceph-deploy:~/ceph-cluster$ ceph config set mgr mgr/dashboard/server_port 9009
+```
+
+ 
+
+这里使用的是方法二的配置。配置完成后，重启模块，加载配置
+
+```bash
+cephadmin@ceph-deploy:~/ceph-cluster$ ceph mgr module disable dashboard
+cephadmin@ceph-deploy:~/ceph-cluster$ ceph mgr module enable dashboard
+```
+
+ 
+
+检查ceph状态
+
+```bash
+cephadmin@ceph-deploy:~/ceph-cluster$ ceph -s
+  cluster:
+    id:     5372c074-edf7-45dd-b635-16422165c17c
+    health: HEALTH_OK
+ 
+  services:
+    mon: 3 daemons, quorum ceph-mon1,ceph-mon2,ceph-mon3 (age 107m)
+    mgr: ceph-mgr2(active, since 18m), standbys: ceph-mgr1
+    mds: 2/2 daemons up, 2 standby
+    osd: 20 osds: 20 up (since 6h), 20 in (since 7d)
+    rgw: 2 daemons active (2 hosts, 1 zones)
+ 
+  data:
+    volumes: 1/1 healthy
+    pools:   12 pools, 337 pgs
+    objects: 304 objects, 68 MiB
+    usage:   1.1 GiB used, 2.0 TiB / 2.0 TiB avail
+    pgs:     337 active+clean
+```
+
+
+
+参考文档：[启用ceph dashboard及并通过prometheus 监控ceph集群状态 - PunchLinux - 博客园 (cnblogs.com)](https://www.cnblogs.com/punchlinux/p/17073011.html#_label1)
 
 ## 副本池创建及配置
 

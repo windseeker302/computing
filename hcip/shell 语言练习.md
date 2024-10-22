@@ -12,7 +12,7 @@
 
   - 双括号(( ))
 
-### test 常见使用场景
+### 常见使用场景
 
 #### 数值比较
 
@@ -192,6 +192,51 @@ do
         echo ""
 done
 ```
+
+
+
+### until语句
+
+until命令和while命令工作的方式完全相反。until命令要求你指定一个通常返回非零退出状态码的测试命令。只有测试命令的退出状态码不为0，bash shell才会执行循环中列出的命令。一旦测试命令返回了退出状态码0，循环就结束了。
+
+until命令的格式如下。
+
+```shell
+until test commands
+do
+    other commands
+done
+```
+
+ 
+
+示例：
+
+本例中会测试var1变量来决定until循环何时停止。只要该变量的值等于0，until命令就会停止循环。同while命令一样，在until命令中使用多个测试命令时要注意。
+
+~~~shell
+$ cat test13
+#!/bin/bash
+# using the until command
+var1=100
+until echo $var1
+[ $var1 -eq 0 ]
+do
+echo Inside the loop: $var1
+var1=$[ $var1 - 25 ]
+done
+$ ./test13
+100
+Inside the loop: 100
+75
+Inside the loop: 75
+50
+Inside the loop: 50
+25
+Inside the loop: 25
+0
+$
+~~~
 
 
 
