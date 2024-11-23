@@ -424,9 +424,10 @@ RUN [OPTIONS] [ "<command>", ... ]
 
 
 
-## docker 走代理
+## docker 代理
 
-docker命令走代理
+### docker 命令走代理
+
 然而实际测试下来，就算我们修改成功了国内的镜像源，有时候由于国内镜像更新不及时，或者需要拉取的镜像比较冷门，只有域外镜像站才有，那么我们不得不让docker pull命令，走我们的代理。
 我们在docker的进程服务文件夹配置我们的代理设置，如果没有我们就新建这个文件夹：
 
@@ -453,8 +454,6 @@ Environment="HTTP_PROXY=代理服务器ip:port"
 Environment="HTTPS_PROXY=代理服务器ip:port"
 ~~~
 
-
-
 假如我们本机已经设置好代理了，那么代理服务器就可以写为localhost，端口就是我们设置的http和https代理端口即可，形如：
 
 ~~~shell
@@ -464,16 +463,12 @@ Environment="HTTPS_PROXY=localhost:port"
 ~~~
 
 
-
-
 保存并退出proxy.conf文件，和更改镜像源一样，重启docker，并重启daemon进程。
 
 ~~~shell
 sudo systemctl daemon-reload		#重启daemon进程
 sudo systemctl restart docker		#重启docker
 ~~~
-
-
 
 
 最后我们仍然是验证一下是否修改成功，运行
@@ -488,6 +483,24 @@ HTTPS Proxy: 10.64.150.195:7890
 
 
 那就说明我们已经成功设置docker pull命令走代理了，一般情况下也就不会出现拉取镜像卡死的情况了。
+
+
+
+### docker 加速器
+
+~~~shell
+cat > /etc/docker/daemon.json << EOF
+{
+  "registry-mirrors": ["https://docker.cloudyshore.top/"]
+}
+EOF
+systemctl daemon-reload
+systemctl restart docker
+~~~
+
+
+
+
 
 ## docker 仓库
 
