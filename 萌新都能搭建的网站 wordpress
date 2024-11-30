@@ -1,0 +1,239 @@
+# 萌新都能搭建的网站 wordpress
+
+## 一、理论
+
+LAMP是指一组通常一起使用来运行动态网站或者服务器的自由软件名称首字母缩写。L指Linux，A指apache，M一般指MySQL，也可以指MariaDB或Mysql，P一般指PHP，也可以指Perl或Python。
+
+- **linux**
+
+  - 操作系统，提供基础的环境和平台来运行其他组件。Linux 是一个开源的、稳定的操作系统，广泛用于服务器。
+
+- **apache**
+
+  - 网络服务器软件，负责处理 HTTP 请求并返回网页内容。Apache 是最流行的 web 服务器之一，支持多种模块和配置，使其非常灵活。
+
+- **MySQL**（或 MariaDB）：
+
+  - 数据库管理系统，用于存储和管理网站的数据。MySQL 是关系型数据库，允许通过 SQL 查询语言进行数据操作。MariaDB 是 MySQL 的一个分支，提供了更多的功能和性能优化。
+
+- **php**
+
+  - 脚本语言，用于开发动态网页。PHP 是最常用的语言，能够与 MySQL 交互，生成动态内容。Perl 和 Python 也可以作为替代选项。
+
+  
+
+## 二、搭建lnmp
+
+### 1.基础环境配置
+
+#### 1).关闭防火墙selinux
+
+```shell
+# 永久关闭防火墙
+$ systemctl stop firewalld
+$ systemctl disbale firewalld
+
+# 永久生效需要重启主机
+$ sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
+
+# 临时生效
+$ setenforce 0
+```
+
+
+
+#### 2).修改主机名（可选）
+
+~~~shell
+$ hostnamectl set-hostname lamp-test
+~~~
+
+
+
+#### 3).可上网
+
+~~~shell
+$ ping 223.5.5.5 -c 4
+PING 223.5.5.5 (223.5.5.5) 56(84) bytes of data.
+64 bytes from 223.5.5.5: icmp_seq=1 ttl=128 time=21.3 ms
+64 bytes from 223.5.5.5: icmp_seq=2 ttl=128 time=41.6 ms
+64 bytes from 223.5.5.5: icmp_seq=3 ttl=128 time=21.6 ms
+64 bytes from 223.5.5.5: icmp_seq=4 ttl=128 time=22.4 ms
+
+--- 223.5.5.5 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3005ms
+rtt min/avg/max/mdev = 21.385/26.785/41.632/8.582 ms
+~~~
+
+
+
+### 2.安装包配置（包管理工具）
+
+```shell
+$ rm -rf /etc/yum.repos.d/*		# 不建议删除，建议备份 
+
+# 阿里源
+$ curl -o /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-7.repo
+
+# epel 源：EPEL(Extra Packages for Enterprise Linux) 是由 Fedora Special Interest Group 维护的 Enterprise Linux（RHEL、CentOS）中经常用到的包。
+$ curl -o /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-7.repo
+
+# 清理缓存
+$ yum clean all && yum repolist
+```
+
+
+
+### 3.apache安装
+
+~~~shell
+# 由于之前已经配置好了 yum 源，直接使用 yum 命令安装即可
+$ yum install -y httpd
+
+# 启动服务
+$ systemctl enable --now httpd
+~~~
+
+
+
+### 4.mariadb安装
+
+~~~shell
+# 安装
+$ yum install -y mariadb-server 
+
+# 启动
+$ systemctl enable --now mariadb
+~~~
+
+
+
+### 5.php安装
+
+~~~shell
+# 使用 Remi 存储库：Remi 存储库是一个第三方存储库，提供了广泛的 PHP 版本和扩展包。你可以按照以下步骤安装并启用 Remi 存储库：
+$ yum install -y https://rpms.remirepo.net/enterprise/remi-release-7.rpm
+ 
+# 启用 PHP 7.3 Remi 存储库，我这里演示7.3，需要其他可以改成其他版本：
+$ yum-config-manager --enable remi-php73
+ 
+# 安装 PHP 7.3.13
+$ yum install php php-cli php-fpm php-mysqlnd php-json php-mbstring php-xml
+
+# 测试
+echo "<?php phpinfo(); ?>" >> /var/www/html/index.php
+# 浏览器访问网页测试，网页地址为 http://<虚拟机ip>/
+# 访问到以下内容，测试成功
+~~~
+
+![image-20241028202520099](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20241028202520099-1730118329810-7.png)
+
+
+
+## 三、搭建wordpress
+
+官方文档：https://developer.wordpress.org/advanced-administration/before-install/howto-install/#things-to-know-before-installing-wordpress
+
+### 1.安装
+
+~~~shell
+$ wget https://cn.wordpress.org/latest-zh_CN.zip
+~~~
+
+
+
+### 2.配置
+
+#### 1).wordpress配置
+
+~~~shell
+# 解压文件
+$ unzip latest-zh_CN.zip	# 如果没有unzip解压命令，请使用 yum install unzip 安装工具
+
+# 拷贝wordpress文件到web服务器根目录
+$ /usr/bin/cp -r wordpress/* /var/www/html		# 注意：* 一定要带，带和不带两个命令区别
+~~~
+
+
+
+#### 2).mysql配置
+
+~~~shell
+[root@test ~]# mysql -uroot -p		   # 默认密码为空
+Enter password: 
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 2
+Server version: 5.5.68-MariaDB MariaDB Server
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+# 创建数据库
+MariaDB [(none)]> CREATE DATABASE wordpress;
+Query OK, 1 row affected (0.00 sec)
+# 创建用户，用户名为wordpress，密码为000000
+MariaDB [(none)]> GRANT ALL PRIVILEGES ON *.* TO "wordpress"@"localhost" identified by '000000';	
+Query OK, 0 rows affected (0.00 sec)
+# 刷新权限
+MariaDB [(none)]> FLUSH PRIVILEGES;
+Query OK, 0 rows affected (0.00 sec)
+~~~
+
+
+
+### 3.启动
+
+浏览器访问网页，网页地址为 http://<虚拟机ip>/
+
+![image-20241029184943304](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-202410291849433041.png)
+
+![image-20241030134840722](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20241030134840722.png)
+
+~~~shell
+# 输入上面配置后，点击 submit，会出现一堆代码，将这些代码复制写入到 '/var/www/html/wp-config.php' 文件中
+# 首个linux编辑文件工具 vim，vi，nano，...等等
+# 配置 wp-config.php 文件，指定后端数据库连接信息
+
+$ vim /var/www/html/wp-config.php
+
+# 完成后点击运行安装程序
+~~~
+
+
+
+#### 完结撒花
+
+![image-20241028210948318](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20241028210948318-1730120989678-23.png)
+
+
+
+## 坑：数据库密码忘了
+
+重置mariadb用户密码流程：
+
+#### 1、生成哈希值
+
+```shell
+[root@314-rantao ~]# echo -n "admin@123" | md5sim
+a02fa2aa6112f910f3916cf5afa71573
+```
+
+#### 2、登录数据库
+
+```sql
+MariaDB [wordpress]> mysql -u root -p
+MariaDB [wordpress]> use wordpress;
+MariaDB [wordpress]> show tables;
+MariaDB [wordpress]> select * from wp_users;
++----+------------+------------------------------------+---------------+-------------------+-----------------------+---------------------+---------------------+-------------+--------------+
+| ID | user_login | user_pass                          | user_nicename | user_email        | user_url              | user_registered     | user_activation_key | user_status | display_name |
++----+------------+------------------------------------+---------------+-------------------+-----------------------+---------------------+---------------------+-------------+--------------+
+|  1 | admin      | $P$BOrtA0pnRheWd16oP2BYkEM5kroyZJ/ | admin         | 2304682167@qq.com | http://172.129.78.233 | 2024-10-28 12:50:44 |                     |           0 | admin        |
++----+------------+------------------------------------+---------------+-------------------+-----------------------+---------------------+---------------------+-------------+--------------+
+1 row in set (0.000 sec)
+#user_pass=刚刚生成的嘻哈值
+MariaDB [wordpress]> UPDATE wp_users SET user_pass= "a02fa2aa6112f910f3916cf5afa71573" WHERE ID = 1
+```
+
+
+

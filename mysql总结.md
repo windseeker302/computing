@@ -1139,19 +1139,58 @@ select e.*,d.* from (select * from emp where emp.entrydate > "2006-07-01") e lef
 
 
 
-### 多表查询案例
-
-
-
-
-
 ## 事务
 
+### 四大特性
+
+ACID
+
+- 原子性（Atomicity）：事务是不可分割的最小操作单元，要么全部成功，要么全部失败。
+- 一致性（consistency）：事务完成时，必须使所有的数据都保持一致状态。
+- 隔离性（Isolation）：数据库系统提供的隔离机制，保证事务在不受外部并发操作影响的独立环境下运行。
+- 持久性（Durability）：事务一旦提交或回滚，它对数据库中的数据的改变就是永久的。
+
+### 并发事务问题
+
+| 问题       | 描述                                                         |
+| ---------- | ------------------------------------------------------------ |
+| 脏读       | 一个事务读到另外一个事务还没有提交的数据。                   |
+| 不可重复读 | 一个事务先后读取同一条记录，但两次读取的数据不同，称之为不可重复读。 |
+| 幻读       | 一个事务按照条件查询数据时，没有对应的数据行，但是在插入数据时，又发现这行数据已经存在，好像出现了”幻影”。 |
+
+### 事务隔离级别
+
+| 隔离级别              | 脏读  | 不可重复读 | 幻读  |
+| --------------------- | ----- | ---------- | ----- |
+| Read uncommitted      | true  | true       | true  |
+| Read committed        | false | true       | true  |
+| Repeatable Read(默认) | false | false      | true  |
+| Serializable          | false | false      | false |
+
+true代表会当前隔离级别会出现此问题。
 
 
 
+隔离级别操作
+
+~~~mysql
+# 查看事务隔离级别
+select @@TRANSACTION_ISOLATION;
+# 设置隔离级别
+SET [SESSIONI|GLOBAL] TRANSACTION ISOLATION LEVEL {READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ | SERIALIZABLE}
+~~~
 
 
+
+事务操作
+
+~~~mysql
+# 开启事务
+START TRANSACTION; 
+
+# 提交/回滚事务
+COMMIT / ROLLBACK;
+~~~
 
 
 

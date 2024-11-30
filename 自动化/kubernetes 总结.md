@@ -1574,7 +1574,37 @@ spec:
 
 ### StatefulSet
 
+**Statefulset** 一般是和 `headless service` 配合使用，因为普通`Service`有`ClusterIp`，直接被DNS解析了，那怎么才能让DNS通过`Service`解析`Pod`的IP呢？所以就有了`Headless Service`。	
+
+> 创建`Headless Service`跟创建普通`Service`时唯一的不同就是在`YAML`定义里指定`spec:clusterIP: None`，也就是不需要`ClusterIP`的`Service`。
+
+重点：**它会为代理的每一个`StatefulSet`创建出来的`Endpoint`也就是`Pod`添加DNS域名解析，这样`Pod`之间就可以相互访问。**
+
 [StatefulSet](https://kubernetes.io/zh-cn/docs/concepts/workloads/controllers/statefulset/) 允许你管理一个或多个运行相同应用代码、但具有不同身份标识的 Pod。 StatefulSet 与 Deployment 不同。Deployment 中的 Pod 预期是可互换的。 StatefulSet 最常见的用途是能够建立其 Pod 与其持久化存储之间的关联。 例如，你可以运行一个将每个 Pod 关联到 [PersistentVolume](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/) 的 StatefulSet。如果该 StatefulSet 中的一个 Pod 失败了，Kubernetes 将创建一个新的 Pod， 并连接到相同的 PersistentVolume。
+
+优点
+
+1. 保持Pod的编排顺序
+
+   通过上面名字叫`stat-go-app`的`StatefulSet`控制器创建`Pod`的过程我们能发现，**`StatefulSet`它所管理的所有 `Pod` ，名称的命名规则是：StatefulSet名-序号。序号都是从 0 开始累加，与 StatefulSet 的每个 Pod 实例一一对应，绝不重复**。
+
+2. 保持Pod固定唯一网络标识
+
+   理解了`Headless Service`真正的用途后，关于`Kubernetes`内部如何让`Pod`固定唯一网络标识这个问题的答案就是：`Headless Service`为代理的每一个`StatefulSet`创建出来的`Pod`添加DNS域名解析。所以在用`StatefulSet`编排实例之间有主从关系这样的有状态应用时，`Pod`相互之间就能以**podName.serviceName.namesapce.svc.cluster.local** 这个域名格式进行通信，这样就不用在担心`Pod`被重新调度到其他的节点上后IP的变化。
+
+3. 保持实例的存储状态
+
+   因为`StatefulSet`创建的这些`PVC`，都以**"PVC名-StatefulSet名-序号"**这个格式命名的。
+
+   假如发生重新调度`web-0`这个`Pod`被重新创建调度到了其他节点，在这个新的`Pod`对象的定义里，由于`volumeClaimTemplates`的存在，它声明使用的`PVC`的名字，还是叫作：**www-web-0**。所以，在这个新的`web-0`被创建出来之后，`Kubernetes`会为它查找绑定名叫`www-web-0`的`PVC`。**由于`PVC`的生命周期是独立于使用它的`Pod`的，这样新`Pod`就接管了以前旧`Pod`留下的数据**。
+
+应用场景
+
+- 由于创建出的pod是固定唯一网络标识，再加上 `hearless service`让pod间可以互相访问，例如redis集群，要选举出主从，只需要在初始化集群时中指定Pod固定唯一网络标识，完成初始化操作后，就算是其中一个节点（pod）故障宕机了，等待它重启来后，集群中的各个节点也是正常状态，这里有两种使用场景：
+  - 一是 slave pod 断线重连了，但master发现其旧Nodeld依旧，就认为该slave还是之前的slave。
+  - 二是 master pod 下线了，群集在其slave中选举新的master，等待master上线后，集群发现其Nodeld依旧，会让旧master变成新master的slave。
+
+
 
 #### 创建
 
@@ -2113,6 +2143,8 @@ ExternalName Service 允许 Service 对外暴露一个外部名称，这个名�
 ##### LoadBalancer
 
 LoadBalancer 可以在云环境中自动创建外部负载均衡器，并将客户端请求路由到 Pod。该类型的 Service 通常用于公共云或私有云环境中，可以将流量平衡到多个集群节点上，从而提高服务的可靠性和可用性。
+
+> 注意：如果没有外部负载均衡，就会一直pening
 
 #### 配置文件
 

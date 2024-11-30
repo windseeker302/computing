@@ -9,7 +9,7 @@
 
 #### 云原生特性容器
 
-![image-20241118102445414](kubeedge.assets/image-20241118102445414.png)
+![img](https://github.com/kubeedge/kubeedge/raw/master/docs/images/kubeedge_arch.png)
 
 服务网格
 
