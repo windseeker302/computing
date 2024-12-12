@@ -1194,9 +1194,183 @@ COMMIT / ROLLBACK;
 
 
 
-
-
 ## 索引
+
+### 概述
+
+索引（index）是帮助MySQL`高效获取数据`的`数据结构`（有序）。在数据之外，数据库系统还维护着满足特定查找算法的数据结构，这些数据结构以某种方式引用（指向）数据，这样就可以在这些数据结构上实现高级查找算法，这种数据结构就是索引。
+
+### 结构
+
+MySQL的索引是在存储引擎层实现的，不同的存储引擎有不同的结构，主要包含以下几种：
+
+| 索引结构              | 描述                                                         |
+| --------------------- | ------------------------------------------------------------ |
+| **B+Tree 结构**       | **最常见的索引类型，大部分引擎都支持B+树索引**               |
+| Hash 索引             | 底层数据结构是用哈希表实现的，只有精确匹配索引列的查询才有效，不支持范围查询 |
+| R-Tree（空间索引）    | 空间索引是MyISAM引擎的一个特殊索引类型，主要用于地理空间数据类型，通常使用较少 |
+| Full-text（全文索引） | 是一种通过建立倒排索引，快速匹配文档的方式。类似于Lucene,Solr,ES |
+
+> 我们平常所说的索引，如果没有特别指明都是指B+树结构组织的索引。
+
+为什么InnoDB存储引l擎选择使用B+tree索引结构？
+
+- 相对于二叉树，层级更少，搜索效率高；
+- 对于B-tree，无论是叶子节点还是非叶子节点，都会保存数据，这样导致一页中存储的键值减少，指针跟着减少，要同样保存大量数据，只能增加树的高度，导致性能降低;
+- 相对Hash索引，B+tree支持范围匹配及排序操作；
+
+### 分类
+
+![image-20241130204358344](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20241130204358344.png)
+
+在InnoDB存储引擎中，根据索引的存储形式，又可以分为以下两种：
+
+![image-20241130204526798](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20241130204526798.png)
+
+聚集索引选取规则：
+
+- 如果存在主键，主键索引就是聚集索引。
+- 如果不存在主键，将使用第一个唯一（UNIQUE）索I为聚集索引。
+- 如果表没有主键，或没有合适的唯一索引，则InnoDB会自动生成一个rowid作为隐藏的聚集索引。
+
+### 语法
+
+创建索引
+
+~~~mysql
+CREATE [ UNIQUE | FULLTEXT ] INDEX index_name ON table_name (index_col_name,...);
+~~~
+
+
+
+查看索引
+
+~~~mysql
+SHOW INDEX FROM table_name;
+~~~
+
+
+
+删除索引
+
+~~~mysql
+DROP INDEX index_name ON table_name;
+~~~
+
+
+
+
+
+### SQL性能分析
+
+- SQL执行频率
+
+  MySQL 客户端连接成功后，通过 show  [session|global] status 命令可以提供服务器状态信息。通过如下指令，可以查看当前数据库的INSERT、UPDATE、DELETE、SELECT的访问频次：
+
+  ~~~mysql
+  show global status like 'Com_______';
+  ~~~
+
+  
+
+- 慢查询日志
+
+  慢查询日志记录了所有执行时间超过指定参数（long_query_time，单位：秒，默认10秒）的所有SQL语句的日志。 
+
+  MySQL的慢查询日志默认没有开启，需要在MySQL的配置文件（/etc/my.cnf）中配置如下信息：
+
+  ~~~shell
+  # 开启MySQL慢日志查询开关 
+  slow_query_log=1
+  
+  # 设置慢日志的时间为2秒，SQL语句执行时间超过2秒，就会视为慢查询，记录慢查询日志 
+  long_query_time=2
+  ~~~
+
+  配置完毕之后，通过以下指令重新启动MysQL服务器进行测试，查看慢日志文件中记录的信息/var/lib/mysql/localhost-slow.log。
+
+- profile
+
+  show profiles能够在做SQL优化时帮助我们了解时间都耗费到哪里去了。通过have_profiling参数，能够看到当前MySQL是否支持。
+
+  profile操作:
+
+  ~~~mysql
+  SELECT @@HAVE_profiling;
+  ~~~
+
+  默认profiling是关闭的，可以通过set语句在session/global级别开启profiling：
+
+  ~~~mysql
+  SET profiling = 1;
+  ~~~
+
+  执行一系列的业务SQL的操作，然后通过如下指令查看指令的执行耗时：
+
+  ~~~mysql
+  # 查看每一条SQL的耗时基本情况 
+  show profiles;
+  
+  # 查看指定query_id的sQL语句各个阶段的耗时情况 
+  show profile for query query_id;
+  
+  # 查看指定queryid的SQL语句CPU的使用情况 
+  show profile cpu for query query_id;
+  ~~~
+
+- explain 执行计划
+
+  EXPLAIN 执行计划各字段含义：
+
+  - id
+
+    select查询的序列号，表示查询中执行select子句或者是操作表的顺序(id相同，执行顺序上到下；id不同，值越大，越先执行)。
+
+  - select_type
+
+    表示SELECT的类型，常见的取值有SIMPLE（简单表，即不使用表连接或者子查询）、PRIMARY（主查询，即外层的查询）、 UNION（UNION 中的第二个或者后面的查询语句）、SUBQUERY（SELECT/WHERE之后包含了子查询）等
+
+  - type
+
+    表示连接类型，性能由好到差的连接类型为NuLL、system、const、eq_ref、ref、range、index、all。
+
+  - possible_key
+
+    显示可能应用在这张表上的索引，一个或多个。
+
+  - Key
+
+    实际使用的索引，如果为NULL，则没有使用索引。
+
+  - Key_len
+
+    表示索引中使用的字节数，该值为索引字段最大可能长度，并非实际使用长度，在不损失精确性的前提下，长度越短越好。
+
+  - rows
+
+    MySQL认为必须要执行查询的行数，在innodb引擎的表中，是一个估计值，可能并不总是准确的。
+
+  - filtered
+
+    表示返回结果的行数占需读取行数的百分比，filtered的值越大越好。
+
+​	
+
+### 索引使用
+
+- 最左前缀法则
+
+  如果索引了多列（联合索引），要遵守最左前缀法则。最左前缀法则指的是查询从索引的最左列开始，并且不跳过索引中的列。如果跳跃某一列，索引将部分失效(后面的字段索引失效)。
+
+- 范围查询
+
+  联合索引中，出现范围查询（>，<)，范围查询右侧的列索引|失效
+
+
+
+### 索引设计原则
+
+
 
 
 
@@ -1261,6 +1435,22 @@ AS 查询语句
 ## 锁
 
 ## InnoDB引擎
+
+mysql 体系结构
+
+![image-20241130113200740](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20241130113200740.png)
+
+存储引擎就是存储数据、建立索引、更新/查询数据等技术的实现方式。存储引擎是基于表的，而不是基于库的，所以存储引擎也可被称为表类型。
+
+查看引擎
+
+~~~mysql
+SHOW ENGINES;
+~~~
+
+
+
+
 
 ## 日志
 
