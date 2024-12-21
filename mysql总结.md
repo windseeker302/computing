@@ -1364,13 +1364,94 @@ DROP INDEX index_name ON table_name;
 
 - 范围查询
 
-  联合索引中，出现范围查询（>，<)，范围查询右侧的列索引|失效
+  联合索引中，出现范围查询（>，<)，范围查询右侧的列索引失效。
 
+- 索引列运算
 
+  不要在索引列上进行运算操作（函数等），索引将失效。
+
+  ~~~shell
+  select * from tb user where substring(phone,10,2) ='15';
+  ~~~
+
+  
+
+- 字符串不加引号
+
+  字符串类型字段使用时，不加引号，索引将失效。
+
+- 模糊查询
+
+  如果仅仅是尾部模糊匹配，索引不会失效。如果是头部模糊匹配，索引失效。
+
+  ~~~shell
+  explain select * from tb_user where profession like '&I&';
+  ~~~
+
+- or连接的条件
+  用or分割开的条件，如果or前的条件中的列有索引，而后面的列中没有索引，那么涉及的索引都不会被用到。
+
+- 数据分布影响
+
+  如果MySQL评估使用索引I比全表更慢，则不使用索引。
+
+- 单列索引于联合索引
+
+  单列索引：即一个索引包含单个列。
+
+  联合索引：即一个索引包含了多个列。
+
+  在业务场景中，如果存在多个查询条件，考虑针对于查询字段建立索引时，建议建立联合索引，而非单列索引。
+
+- SQL 提示
+
+  SQL提示，是优化数据库的一个重要手段，简单来说，就是在SQL语句中加入一些人为的提示来达到优化操作的目的。
+
+  ~~~mysql
+  # use index
+  explain select * from tb_user use index(idx_user_pro) where profession = '软件工程'; 
+  # ignore index
+  explain select * from tb_user ignore index(idx_user_pro) where profession = '软件工程'; 
+  # force index
+  explain select * from tb_user force index(idx_user_pro) where profession = '软件工程';
+  ~~~
+
+  
+
+- 覆盖索引
+
+  尽量使用覆盖索引（查询使用了索引，并且需要返回的列，在该索引中已经全部能够找到），减少select *。
+
+- 前缀索引
+
+  当字段类型为字符串（varchar，text等）时，有时候需要索引很长的字符串，这会让索引变得很大，查询时，浪费大量的磁盘lO，影响查询效率。此时可以只将字符串的一部分前缀，建立索引，这样可以大大节约索引空间，从而提高索引效率。
+
+  语法
+
+  ~~~mysql
+  create index idx_xxxx on table_name(column(n));
+  ~~~
+
+  可以根据索引的选择性来决定，而选择性是指不重复的索引值（基数）和数据表的记录总数的比值，索引选择性越高则查询效率越高，唯一索引的选择性是1，这是最好的索引选择性，性能也是最好的。
+
+  ~~~mysql
+  select count(distinctemail) / count(*) from tb_user ;
+  select count(distinct substring(email,1,5) / count(*) from tb_user ;
+  ~~~
+
+  
+
+  
 
 ### 索引设计原则
 
-
+1. 针对于数据量较大，且查询比较频繁的表建立索引。
+2. 针对于常作为查询条件（where）、排序（orderby）、分组（groupby）操作的字段建立索引。
+3. 量选择区分度高的列作为索引，尽量建立唯一索引，区分度越高，使用索引的效率越高。例如：性别，区分度不高
+4. 如果是字符串类型的字段，字段的长度较长，可以针对于字段的特点，建立前缀索引。
+5. 尽量使用联合索引，减少单列索引，查询时，联合索引很多时候可以覆盖索引，节省存储空间，避免回表，提高查询效率。
+6. 要控制索引的数量，索引并不是多多益善，索引越多，维护索引结构的代价也就越大，会影响增删改的效率。
+7. 如果索引列不能存储NULL值，请在创建表时使用NOTNULL约束它。当优化器知道每列是否包含NULL值时，它可以更好地确定哪个索引最有效地用于查询。
 
 
 
