@@ -655,7 +655,7 @@ LIMIT
 
   ~~~sql
   USE mysql;
-  SELECT * FROM user;
+  SELECT user,host FROM user;
   ~~~
 
   
@@ -1452,6 +1452,74 @@ DROP INDEX index_name ON table_name;
 5. 尽量使用联合索引，减少单列索引，查询时，联合索引很多时候可以覆盖索引，节省存储空间，避免回表，提高查询效率。
 6. 要控制索引的数量，索引并不是多多益善，索引越多，维护索引结构的代价也就越大，会影响增删改的效率。
 7. 如果索引列不能存储NULL值，请在创建表时使用NOTNULL约束它。当优化器知道每列是否包含NULL值时，它可以更好地确定哪个索引最有效地用于查询。
+
+
+
+## SQL 优化
+
+### 插入数据
+
+- insert 优化
+
+  1. 批量插入
+
+     ~~~shell
+     insert into tb_table values(1,'tom'),(2,'cat'),(3,'jerry');
+     ~~~
+
+     
+
+  2. 手动提交事务
+
+     ~~~shell
+     start transaction;
+     insert into tb_table values(1,'tom'),(2,'cat'),(3,'jerry');
+     commit;
+     ~~~
+
+     
+
+     
+
+  3. 主键顺序插入
+
+     ~~~shell
+     # 主键乱序插入：
+     3 7 5 89 15 4 2 88 21 9 1 8 
+     # 主键顺序插入：
+     1 2 3 4 5 6 7 8 9 15 21 88 89
+     ~~~
+
+     
+
+  4. 如果一次性需要插入大批量数据，使用insert语句插入性能较低，此时可以使用MySQL数据库提供的load指令进行插入。
+
+     ~~~shell
+     # 客户端连接服务端时，加上参数--local-infile 
+     mysql --local-infile -uroot -p
+     # 设置全局参数locaL_infile为l，开启从本地加载文件导入数据的开关 
+     set global local_infile=1;
+     # 执行load指令将准备好的数据，加载到表结构中
+     load data local infile '/root/sqll.log' into table tb_user fields terminated by ',' lines terminated by '\n';
+     ~~~
+
+     
+
+
+
+### 主键优化
+
+### order by优化
+
+### group by 优化
+
+### limit 优化
+
+### count 优化
+
+### update 优化
+
+
 
 
 
