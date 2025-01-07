@@ -383,6 +383,21 @@ LIMIT
    SELECT 字段列表 FROM 表名 WHERE 列表条件;
    ~~~
 
+   - 基本查询
+
+     
+
+   - 模糊查询
+
+     ~~~sql
+     模糊查询
+     关键字是like，通常位于条件字段后面
+     
+     语法：select 字段 from 表名 where 字段 like ‘%数据%’；
+     ~~~
+
+     
+
    
 
 2. 条件
@@ -1568,7 +1583,7 @@ InnoDB引擎就麻烦了，它执行count（*）的时候，需要把数据一�
 
 ### update 优化
 
-
+InnoDB的行锁是针对索引加的锁，不是针对记录加的锁，并且该索引不能失效，否则会从行锁升级为表锁。
 
 
 
@@ -1585,12 +1600,35 @@ InnoDB引擎就麻烦了，它执行count（*）的时候，需要把数据一�
 
 #### 语句
 
-~~~mysql
+创建
+
+~~~sql
 CREATE [OR REPLACE]
 [ALGORITHM = {UNDEFINED | MERGE | TEMPTABLE}]
 VIEW 视图名称 [(字段列表)]
 AS 查询语句
 [WITH [CASCADED|LOCAL] CHECK OPTION]
+~~~
+
+
+
+查询
+
+~~~mysql
+# 查看创建视图语句
+SHOW CREATE VIEW 视图名称;
+
+# 查看视图数据
+SELECT * FROM 视图名称...;
+
+# 修改
+## 方法一：
+CREATE [OR REPLACE] VIEW 视图名称[(列名列表)] AS SELECT语句 WITH[CASCADED|LOCAL]CHECK OPTION];
+## 方法二：
+ALTER VIEW 视图名称[(列名列表)] AS SELECT语句 [WITH[CASCADED|LOCAL] CHECK OPTION];
+
+# 删除
+DROP VIEW [IF EXISTS] 视图名称 [视图名称]...;
 ~~~
 
 
@@ -1610,27 +1648,148 @@ AS 查询语句
 2. 创建多表联合视图
 
    ~~~mysql
+   CREATE VIEW tb_stu_course_view AS 
+   select * from student s,students_course sc,course c where s.id = sc.studentid and sc.studentid = c.id;
    ~~~
-
-   
-
-3. 基于视图创建视图
-
-   
-
-   
-
-   
 
 
 
 ### 存储过程
 
+存储过程是事先经过编译并存储在数据库中的一段SQL语句的集合，调用存储过程可以简化应用开发人员的很多工作，减少数据在数据库和应用服务器之间的传输，对于提高数据处理的效率是有好处的。
+
+存储过程思想上很简单，就是数据库SQL语言层面的代码封装与重用。
+
+
+
 ### 触发器
+
+触发器是与表有关的数据库对象，指在insert/update/delete之前或之后，触发并执行触发器中定义的SQL语句集合。触发器的这种特性可以协助应用在数据库端确保数据的完整性，日志记录，数据校验等操作。
+
+使用别名OLD和NEW来引用触发器中发生变化的记录内容，这与其他的数据库是相似的。现在触发器还只支持行级触发，不支持语句
+级触发。
+
+#### 语法
+
+创建
+
+~~~sql
+CREATE TRIGGER trigger_name
+BEFORE/AFTER INSERT/UPDATE/DELETE
+ON tbl_name FOR EACH ROW     # 行级触发器
+BEGIN
+	trigger_stmt;
+END;
+~~~
+
+查看
+
+~~~sql
+SHOW TRIGGER;
+~~~
+
+删除
+
+~~~sql
+DROP TRIGGER [schema_name.]trigger_name;	# 如果没有指定 schema_name，默认为当前数据库。
+~~~
 
 
 
 ## 锁
+
+锁是计算机协调多个进程或线程并发访问某一资源的机制。在数据库中，除传统的计算资源（CPU、RAM、I/O）的争用以外，数据也是一种供许多用户共享的资源。如何保证数据并发访问的一致性、有效性是所有数据库必须解决的一个问题，锁冲突也是影响数据库并发访问性能的一个重要因素。从这个角度来说，锁对数据库而言显得尤其重要，也更加复杂。
+
+
+
+### 全局锁
+
+全局锁就是对整个数据库实例加锁，加锁后整个实例就处于只读状态，后续的DML的写语句，DDL语句，已经更新操作的事务提交语句都将被阻塞。
+其典型的使用场景是做全库的逻辑备份，对所有的表进行锁定，从而获取一致性视图，保证数据的完整性。
+
+特点：
+
+1. 如果在主库上备份，那么在备份期间都不能执行更新，业务基本上就得停摆。
+2. 如果在从库上备份，那么在备份期间从库不能执行主库同步过来的二进制日志（binlog），会导致主从延迟。
+
+> 小卫士：
+>
+> 在lnnoDB引擎中，我们可以在备份时加上参数 --single-transaction 参数来完成不加锁的一致性数据备份。
+
+语法：
+
+~~~sql
+#　加全局锁
+flush tables with read lock;
+# 解（释放）锁
+unlock tables;
+~~~
+
+
+
+### 表级锁
+
+表级锁，每次作锁住整张表。锁定粒度大，发生锁冲突的概率最高，并发度最低。应用在MyISAM、InnoDB、BDB等存储引擎中。
+
+对于表级锁，分为三类：
+
+1. 表锁
+
+   1. 表共享读锁（read lock）
+      1. 读锁不会阻塞其他客户端的读，但是会阻塞写。
+   2. 表独占写锁（write lock）
+      1. 写锁既会阻塞其他客户端的读，又会阻塞其他客户端的写。
+
+2. 元数据锁（meta data lock，MDL）
+
+   MDL加锁过程是系统自动控制，无需显式使用，在访问一张表的时候会自动加上。MDL锁主要作用是维护表元数据的数据一致性，在表上有活动事务的时候，不可以对元数据进行写入操作。为了避免DML与DDL冲突，保证读写的正确性。
+
+   在MySQL5.5中引I入了MDL，当对一张表进行增删改查的时候，加MDL读锁(共享)；当对表结构进行变更操作的时候，加MDL写锁(排他)。
+
+   | 对应SQL                                       | 锁类型                                | 说明                                             |
+   | --------------------------------------------- | ------------------------------------- | ------------------------------------------------ |
+   | lock tables xxx read / write                  | SHARED_READ_ONLY/SHARED_NO_READ_WRITE |                                                  |
+   | select，select ... lock in share mode         | SHARED_READ                           | 与SHARED_READ、SHARED_WRITE兼容，与EXCLUSIVE互斥 |
+   | insert，update，delete，select ... for update | SHARED_WRITE                          | 与SHARED_READ、SHARED_WRITE兼容，与EXCLUSIVE互斥 |
+   | alter table ...                               | EXCLUSIVE                             | 与其他的MDL都互斥                                |
+
+   查看元数据锁：
+
+   ~~~sql
+   select object_type,object_schema,object_name,lock_type,lock_duration from performance_schema.metadata_locks;
+   ~~~
+
+   
+
+3. 意向锁
+
+   为了避免DML在执行时，加的行锁与表锁的冲突，在InnoDB中引入了意向锁，使得表锁不用检查每行数据是否加锁，使用意向锁来减少表锁的检查。
+
+   1. 意向共享锁（Is）：由语句select ... lock in share mode添加。
+
+      与表锁共享锁（read）兼容，与表锁排它锁（write）互斥。
+
+   2. 意向排他锁（Ix）：由insert、update、delete、select ... for update添加。
+
+      与表锁共享锁（read）及排它锁（write）都互斥。意向锁之间不会互斥。
+
+   
+
+语法：
+
+~~~sql
+# 加锁	
+lock tables [表名...] read/write;
+
+# 释放锁
+unlock tables / 客户端连接关闭
+~~~
+
+
+
+### 行级锁
+
+
 
 ## InnoDB引擎
 
