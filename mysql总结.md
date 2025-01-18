@@ -1919,7 +1919,7 @@ MySQL5.5版本开始，默认使用InnoDB存储引擎，侧为磁盘结构。
 
   参数：innodb_file_per_table
 
-- General TablespaceS：通用表空间，需要通过CREATETABLESPACE语法创建通用表空间，在创建表时，可以指定该表空间。
+- General Tablespaces：通用表空间，需要通过CREATETABLESPACE语法创建通用表空间，在创建表时，可以指定该表空间。
 
 - Undo Tablespaces：撤销表空间，MySQL实例在初始化时会自动创建两个默认的undo表空间（初始大小 16M），用于存储undolog日志。
 
@@ -2015,7 +2015,7 @@ Undo log存储：undo log采用段的方式进行管理和记录，存放在前�
 
   undo log 版本链
 
-  ![image-20250114153224377](mysql总结.assets/image-20250114153224377.png)
+  ![image-20250114153224377](https://gitee.com/ws203/pic-go-images/raw/master/imgs/image-20250114153224377.png)
 
   - 不同事务或相同事务对同一条记录进行修改，会导致该记录的undolog生成一条记录版本链表，链表的头部是最新的旧记录，链表尾部是最早的旧记录。
 
@@ -2132,7 +2132,50 @@ Mysql数据库安装完成后，自带了一下四个数据库，具体作用如
 
 - mysqldump
 
-  mysqldump客户端工具用来备份数据库或在不同数据库之间进行数据迁移。备份内容包含创建表，及插入表的SQL语句
+  mysqldump客户端工具用来备份数据库或在不同数据库之间进行数据迁移。备份内容包含创建表，及插入表的SQL语句。
+
+  ~~~shell
+  # 语法：
+  	mysqldump [options] db_name [tables]
+  	mysqldump [options]	--database/-B [db2 db3...]
+  	mysqldump [options] --all-databases/-A
+  # 连接选项:
+  	-u,--user=name			# 指定用户名
+  	-p,--password[=name]	# 指定密码
+  	-h,--host=name			# 指定服务器
+  	-P,--port=#				# 指定连接端口
+  # 输出选项:
+  	--add-drop-database			# 在每一个数据库创建语句前加上 drop database 语句
+  	--add-drop-table			# 在每一表创建语句前加上droptable语句，默认开启；不开启（--skip-add-drop-table）
+  	-n,--no-create-db			# 不包含数据库的创建语句
+  	-t,--no-create-info			# 不包含数据表的创建语句
+  	-d,--no-data				# 不包含数据
+  	-T,--tab=name				# 自动生成两个文件：一个.sgl文件，创建表结构的语句；一个.txt文件，数据文件
+  ~~~
+
+- mysqlimport/source
+
+  mysqlimport 是客户端数据导入工具，用来导入mysqldump 加-T参数后导出的文本文件。
+
+  ~~~sql
+  # 语法：
+  	mysqlimport [options] db_name textfile1 [textfile2]
+  # 示例：
+  	mysqlimport -uroot test1 /tmp/city.txt
+  ~~~
+
+  
+
+  如果需要导入sql文件，可以使用mysql中的source指令：
+
+  ~~~sql
+  # 语法：
+  	source /root/xxxx.sql
+  ~~~
+
+  
+
+  
 
   
 
