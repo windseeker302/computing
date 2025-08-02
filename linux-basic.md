@@ -2,6 +2,8 @@
 
 ### 修改 ip
 
+centos：
+
 - nmtui工具 修改
 - vim /etc/sysconfig/network-scripts/<`ifcfg-`加上网络接口名称命名>
   - `BOOTPROTO=static`：将网络配置设置为静态。

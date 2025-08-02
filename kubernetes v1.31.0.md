@@ -3545,7 +3545,6 @@ kubectl apply -f manifests/
 ~~~
 
 
-
 #### 访问测试
 
 ~~~shell
@@ -3667,15 +3666,6 @@ kubectl create token -n kube-system dashboard-admin
 
 Logstash 的主要作用是收集分布在各处的 log 并进行处理；Elasticsearch 则是一个集中存储 log 的地方，更重要的是它是一个全文检索以及分析的引擎，它能让用户以近乎实时的方式来查看、分析海量的数据。Kibana 则是为 Elasticsearch 开发的前端 GUI，让用户可以很方便的以图形化的接口查询 Elasticsearch 中存储的数据，同时也提供了各种分析的模块，比如构建 dashboard 的功能。
 
-### Elasticsearch 
-
-
-
-### Filebeat 
-
-
-
-### Kibana 
 
 
 

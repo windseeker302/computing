@@ -1,7 +1,5 @@
 # docker
 
-
-
 ## docker 基本构成
 
 ### 镜像（image）
@@ -163,7 +161,7 @@ docker run -d test:v1.0
 
 #### ADD
 
-语法：ADD [OPTIONS] <src> ... <dest>
+语法：ADD [OPTIONS] `<src> ... <dest>`
 
 - 添加本地文件或远程文件和目录。
 
@@ -185,7 +183,7 @@ docker run -d test:v1.0
 
 #### ARG
 
-语法：ARG <name>[=<default value>]
+语法：ARG `<name>[=<default value>]`
 
 - 使用构建时变量
 
@@ -218,7 +216,7 @@ docker run -d test:v1.0
 
 #### COPY
 
-语法：COPY [OPTIONS] <src> ... <dest>
+语法：COPY [OPTIONS] `<src> ... <dest>`
 
 - `COPY` 指令从 `<src>` 复制新文件或目录，并将它们添加到映像的文件系统中的路径 `<dest>`。
 - 可以从生成上下文、生成阶段、命名上下文或图像中复制文件和目录。
@@ -245,7 +243,7 @@ docker run -d test:v1.0
 
 #### ENV
 
-语法：ENV <key>=<value> ...
+语法：ENV `<key>=<value>` ...
 
 - 设置环境变量。
 
@@ -261,7 +259,7 @@ docker run -d test:v1.0
 
 #### EXPOSE
 
-语法：EXPOSE <port> [<port>/<protocol>...]
+语法：EXPOSE `<port> [<port>/<protocol>`...]
 
 - 描述应用程序正在侦听的端口。
 
@@ -280,7 +278,7 @@ docker run -d test:v1.0
 
 #### FROM
 
-语法：FROM [--platform=<platform>] <image> [AS <name>]
+语法：FROM `[--platform=<platform>] <image> [AS <name>]`
 
 - 从基础映像创建新的生成阶段。
 - 始化新的构建阶段，并为后续指令设置[基础映像](https://docs.docker.com/glossary/#base-image)。因此，有效的 Dockerfile 必须以 `FROM` 指令开头。图像可以是任何有效的图像。
@@ -315,7 +313,7 @@ docker run -d test:v1.0
 
 #### LABEL
 
-语法：LABEL <key>=<value> <key>=<value> <key>=<value> ...
+语法：LABEL `<key>=<value> <key>=<value> <key>=<value> ...`
 
 - 指令将元数据添加到图像中。`LABEL`是一个键值对。若要在 `LABEL` 值中包含空格，请像在命令行分析中一样使用引号和反斜杠。
 
@@ -370,7 +368,7 @@ RUN [OPTIONS] [ "<command>", ... ]
 
 语法：
 
-  USER <user>[:<group>]
+  USER `<user>[:<group>]`
 
   USER UID[:GID]
 
@@ -427,6 +425,8 @@ RUN [OPTIONS] [ "<command>", ... ]
 ## docker 代理
 
 ### docker 命令走代理
+
+[dockerd |Docker 文档 --- dockerd | Docker Docs](https://docs.docker.com/reference/cli/dockerd/#proxy-configuration)
 
 然而实际测试下来，就算我们修改成功了国内的镜像源，有时候由于国内镜像更新不及时，或者需要拉取的镜像比较冷门，只有域外镜像站才有，那么我们不得不让docker pull命令，走我们的代理。
 我们在docker的进程服务文件夹配置我们的代理设置，如果没有我们就新建这个文件夹：
