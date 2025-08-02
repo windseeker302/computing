@@ -121,14 +121,53 @@ docker run \
 | --web.max-connections=512         | 并发连接数                      |
 | --log.level=info                  | Prometheus 日志默认输出到屏幕（标准输出） |
 | --log.format=logfmt               | 日志格式                       |
-|                                   |                            |
 
+#### 2.4.2 服务端配置文件配置
 
-#### 2.4.2 服务端命令行配置
+Prometheus 配置为 [YAML](https://yaml.org/)。Prometheus 下载在名为 `prometheus.yml` 的文件中附带了一个示例配置，这是一个很好的入门位置。
+我们删除了示例文件中的大部分注释，使其更加简洁（注释是以 `#` 为前缀的行）。
+~~~yaml
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
 
+rule_files:
+  # - "first.rules"
+  # - "second.rules"
 
+scrape_configs:             
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+~~~
 
+示例配置文件中有三个配置块：`global`、`rule_files` 和 `scrape_configs`。
 
+`全局`块控制 Prometheus 服务器的全局配置。我们有两个选择。第一个是 `scrape_interval`，控制 Prometheus 抓取目标的频率。您可以为单个目标覆盖此设置。在这种情况下，全局设置为每 15 秒抓取一次。`evaluation_interval` 选项控制 Prometheus 评估规则的频率。Prometheus 使用规则创建新时间序列并生成警报。
+
+`rule_files` 块指定我们希望 Prometheus 服务器加载的任何规则的位置。目前我们还没有规则。
+
+最后一个块 `scrape_configs` 控制 Prometheus 监控哪些资源。由于 Prometheus 还将有关自身的数据公开为 HTTP 端点，因此它可以抓取和监控自己的健康状况。在默认配置中，有一个名为 `prometheus` 的作业，它抓取 Prometheus 服务器公开的时间序列数据。该作业包含单个静态配置的目标，即端口 `9090` 上的`本地主机` 。Prometheus 希望指标在`路径为 /metrics` 的目标上可用。因此，此默认作业是通过 URL 进行抓取：[http://localhost:9090/metrics](http://localhost:9090/metrics)。
+
+返回的时间序列数据将详细说明 Prometheus 服务器的状态和性能。
+
+有关配置选项的完整规范，请参阅 [配置文档](https://prometheus.io/docs/operating/configuration/) 。
+
+### 2.5 systemctl 托管
+
+~~~sh
+root@ecs-prometheus:/opt/prometheus# cat /lib/systemd/system/prometheus.service         
+[Unit]                                                                                  
+Description=prometheus server                                                          
+After=network.target auditd.service                                                     
+[Service]                                                                               
+ExecStart=/opt/prometheus/prometheus --config.file="/opt/prometheus/prometheus.yml"     
+KillMode=process                                                                        
+Type=simple                                                                             
+[Install]                                                                               
+WantedBy=multi-user.target
+~~~
+### 2.6 Exporter
 
 
 
