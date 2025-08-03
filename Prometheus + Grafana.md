@@ -103,7 +103,7 @@ root@ecs-prometheus:/opt/prometheus# ./prometheus  --config.file="prometheus.yml
 ~~~shell
 docker run \
     -d -p 9090:9090 \
-    -v /path/to/prometheus.yml:/etc/prometheus/prometheus.yml \
+    -v /path/to/:/etc/prometheus/ \
     prom/prometheus
 ~~~
 
@@ -308,8 +308,143 @@ fi
 ~~~
 
 
-## 六、
+## 六、Alertmanager
 
+使用 Prometheus 发出警报分为两部分。Prometheus 服务器中的告警规则会向 Alertmanager 发送告警。 [警报管理器](https://prometheus.io/docs/alerting/latest/alertmanager/) 然后管理这些警报，包括静音、抑制、聚合和 通过电子邮件、待命通知系统和聊天平台等方法发送通知。
+
+Alertmanager 的特性：
+- 分组
+	分组将类似性质的警报分类为单个通知。这在大型中断期间特别有用，因为许多系统同时发生故障，并且可能同时触发数百到数千个警报。
+- 抑制
+	抑制是一种概念，即在某些其他警报已经触发时禁止某些警报的通知。
+- 静音
+	Silences are a straightforward way to simply mute alerts for a given time. A silence is configured based on matchers, just like the routing tree. Incoming alerts are checked whether they match all the equality or regular expression matchers of an active silence. If they do, no notifications will be sent out for that alert.  
+	静音是一种在给定时间内简单地将警报静音的简单方法。静默是根据匹配器配置的，就像路由树一样。将检查传入警报是否与活动静默的所有相等或正则表达式匹配器匹配。如果这样做，则不会针对该警报发送任何通知。
+- 高可用性
+	Alertmanager 支持配置以创建集群以实现高可用性。这可以使用 [--cluster-*](https://github.com/prometheus/alertmanager#high-availability) 标志进行配置。
+
+完整请参考官方：[警报管理器 |普罗 米修斯 --- Alertmanager | Prometheus](https://prometheus.io/docs/alerting/latest/alertmanager/)
+### 6.1 下载
+
+下载地址：[Download | Prometheus](https://prometheus.io/download/#alertmanager)
+### 6.2 配置
+
+The main steps to setting up alerting and notifications are:  
+设置警报和通知的主要步骤是：
+
+- Setup and [configure](https://prometheus.io/docs/alerting/latest/configuration/) the Alertmanager  
+    设置和[配置](https://prometheus.io/docs/alerting/latest/configuration/)警报管理器
+- [Configure Prometheus](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#alertmanager_config) to talk to the Alertmanager  
+    [配置 Prometheus](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#alertmanager_config) 以与 Alertmanager 通信
+- Create [alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/) in Prometheus  
+    在 Prometheus 中创建[告警规则](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
+    
+
+#### 1). 下载安装
+
+~~~ shell
+root@ecs-prometheus:~# tar -xf alertmanager-0.28.1.linux-amd64.tar.gz -C /opt/
+root@ecs-prometheus:~# ln -s /opt/alertmanager-0.28.1.linux-amd64/ /opt/alertmanager
+~~~
+
+#### 2). 修改 alertmanager 配置
+
+编辑 altermanager 配置文件 `/opt/alertmanager/alertmanager.yml` 使用 wechat API 进行告警。
+
+~~~yaml
+# 每个警报都会在配置的顶级路由处进入路由树，该路由必须与所有警报匹配（即没有任何配置的匹配器）。然后它遍历子节点。如果 `continue` 设置为 false，则在第一个匹配的子项之后停止。如果匹配节点上的 `continue` 为 true，则警报将继续与后续同级匹配。如果告警与节点的任何子节点都不匹配（没有匹配的子节点，或者不存在），则根据当前节点的配置参数处理告警。
+route:
+  # 这里只设置一个路由，意思就是所有的警报只会在这一个路由下发送。
+  group_by: ['alertname']         # 告警根据哪些标签进行分组。
+	  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: 'web.hook'
+# 接收方：是一个或多个通知集成的命名配置。
+receivers:
+  - name: 'wechat'
+    wechat_config:
+	  - # 是否通知已解决的警报
+		send_resolved: false   # default = false 
+		﻿
+		# 与微信API对话时使用的API键
+		api_secret: <secret>  
+		﻿
+		# 微信 API URL
+		api_url: <string> 
+		﻿
+		# 用于身份验证的公司id
+		corp_id: <string> 
+		﻿
+		# 微信API定义的API请求数据
+		message: <tmpl_string> # default = '{{ template "wechat.default.message" . }}' 
+		# 消息类型的类型，支持的值是“text”和“markdown”
+		message_type: <string> | default = 'text' ]
+		agent_id: <string>  # default = '{{ template "wechat.default.agent_id" . }}' 
+		to_user: <string> # default = '{{ template "wechat.default.to_user" . }}' 
+		to_party: <string> # default = '{{ template "wechat.default.to_party" . }}' 
+		to_tag: <string> # default = '{{ template "wechat.default.to_tag" . }}' 
+# 合理设置抑制规则可以减少垃圾告警的产生
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'dev', 'instance']
+~~~
+
+
+#### 3). 启动
+
+~~~shell
+root@ecs-prometheus:~# cd /opt/alertmanager
+root@ecs-prometheus:/opt/alertmanager# ./alertmanager --config.file=alertmanager.yml
+~~~
+
+#### 4). 添加 prometheus 监控配置
+
+~~~shell
+alerting:
+  alertmanagers:
+    static_configs:
+      - targets:
+        - 127.0.0.1:9093
+~~~
+
+#### 5). 添加 prometheus 报警规则配置
+
+编辑 `prometheus.yml`
+
+~~~shell
+rule_files:
+  - "rules/*.yml"
+~~~
+
+编辑 `rules/node_down.yml`
+
+~~~shell
+groups:
+- name: 节点状态
+  rules:
+
+  # Alert for any instance that is unreachable for >5 minutes.
+  - alert: InstanceDown
+    expr: up == 0
+    for: 5m
+    labels:
+      severity: page
+    annotations:
+      summary: "Instance {{ $labels.instance }} down"
+      description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes."
+
+  # Alert for any instance that has a median request latency >1s.
+  - alert: APIHighRequestLatency
+    expr: api_http_request_latencies_second{quantile="0.5"} > 1
+    for: 10m
+    annotations:
+      summary: "High request latency on {{ $labels.instance }}"
+      description: "{{ $labels.instance }} has a median request latency above 1s (current value: {{ $value }}s)"
+~~~
 
 
 
@@ -408,7 +543,7 @@ To sign in to Grafana for the first time, follow these steps:
     
     ```bash
     docker run --name loki -d -v $(pwd):/mnt/config -p 3100:3100 grafana/loki:3.4.1 -config.file=/mnt/config/loki-config.yaml
-    docker run --name promtail -d -v $(pwd):/mnt/config -v /var/log:/var/log --link loki grafana/promtail:3.4.1 -config.file=/mnt/config/promtail-config.yaml
+    docker run --name promtail -d --privileged -v $(pwd):/mnt/config -v /var/log:/var/log --link loki grafana/promtail:3.4.1 -config.file=/mnt/config/promtail-config.yaml
     ```
     
     > Note  注意
@@ -436,3 +571,71 @@ f142ba812e25   grafana/promtail:3.5.1                 "/usr/bin/promtail -…"  
         若要查看就绪情况，请导航到 http://localhost:3100/ready。
     - To view metrics, navigate to http://localhost:3100/metrics.  
         要查看指标，请导航到 http://localhost:3100/metrics。
+
+### 4.3 配置
+
+如上的 Docker 容器中的配置已经配置完成，这里只是展示配置信息
+
+#### 1). Loki 配置
+
+~~~shell
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+  alertmanager_url: http://localhost:9093        # 默认地址为localhost，可以修改为Prometheus 的 alertmanager 地址
+~~~
+#### 2). Promtail 配置
+
+~~~yaml
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+- job_name: system
+  static_configs:
+  - targets:
+      - localhost
+    labels:
+      job: varlogs
+      __path__: /var/log/*log
+~~~
+
+
+### 4.4 Grafana 添加数据源
+
+![[Pasted image 20250804061529.png]]
+![[Pasted image 20250804061805.png]]
+![[Pasted image 20250804061825.png]]
+![[Pasted image 20250804063402.png]]
