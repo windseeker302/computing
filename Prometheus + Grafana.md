@@ -379,7 +379,7 @@ receivers:
 		# 微信API定义的API请求数据
 		message: <tmpl_string> # default = '{{ template "wechat.default.message" . }}' 
 		# 消息类型的类型，支持的值是“text”和“markdown”
-		message_type: <string> | default = 'text' ]
+		message_type: <string> # default = 'text' 
 		agent_id: <string>  # default = '{{ template "wechat.default.agent_id" . }}' 
 		to_user: <string> # default = '{{ template "wechat.default.to_user" . }}' 
 		to_party: <string> # default = '{{ template "wechat.default.to_party" . }}' 
