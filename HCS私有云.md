@@ -183,7 +183,7 @@ FusionStorage存储系统分为了三个不同类型的版本：
 2. 2.FusionStorage File（文件存储）
 3. 3.FusionStorage OBS（分布式对象存储）通常我们说FusionStorage是指Block版本，本文重点也是关于块存储。
 
-### 3.2创造思想：
+### 3.2 创造思想：
 
 1. 数据写入是随机的
 2. 存储的数据是均匀的分布在存储介质上
