@@ -1015,7 +1015,7 @@ OSPF通过状态机驱动邻居关系演进，最终形成邻接（Adjacency）�
     
 - **状态验证命令**：
     ~~~bash
-    show ip ospf neighbor
+    display ip ospf neighbor
 	# 输出示例：
 	Neighbor ID     Pri   State      Dead Time
 	192.168.1.2     1     2-WAY      00:00:37
@@ -1057,7 +1057,7 @@ OSPF通过状态机驱动邻居关系演进，最终形成邻接（Adjacency）�
 - **验证命令**：
     ~~~bash
     debug ip ospf packets    # 查看LSR/LSU交互（慎用）
-	show ip ospf database    # 确认LSDB同步
+	display ip ospf database    # 确认LSDB同步
     ~~~
 
 #### **5. Loading** → **Full**
@@ -1069,7 +1069,7 @@ OSPF通过状态机驱动邻居关系演进，最终形成邻接（Adjacency）�
     
 - **标志字段**：
     ~~~bash
-    show ip ospf neighbor
+    display ip ospf neighbor
 	# 输出中State显示FULL/DR、FULL/BDR或FULL/-
     ~~~
 
@@ -1188,7 +1188,7 @@ OSPF有五种类型的协议报文。这些报文在OSPF路由器之间交互中
 | Hello                | 周期性发送，用来发现和维护OSPF邻居关系。                            |
 | Database Description | 描述本地LSDB的摘要信息，用于两台设备进行数据库同步。                      |
 | Link State Request   | 用于向对方请求所需要的LSA。设备只有在OSPF邻居双方成功交换DD报文后才会向对方发出LSR报文 |
-| LinkStateUpdate      | 用于向对方发送其所需要的LSA                                   |
+| Link State Update    | 用于向对方发送其所需要的LSA                                   |
 | Link State ACK       | 用来对收到的LSA进行确认                                     |
 ### 2) LSA 类型
 
@@ -1260,7 +1260,7 @@ OSPF有三张重要的表项，**OSPF邻居表**、**LSDB表**和**OSPF路由表
 
 ### 3) OSPF路由表
 
-- OSPF路由表和路由器路由表是两张不同的表项。本例中OSPF路由表有三条路由。
+- OSPF路由表和路由器路由表是两张不同的表项。
 - OSPF路由表包含Destination、Cost和NextHop等指导转发的信息。
 - 使用命令`display ospf routing`查看osPF路由表。
 
@@ -1554,7 +1554,6 @@ MAC 地址表示：
 
 
 MAC地址构成及分类：
-
 - OUI (Organizationally Unique Identifier） :厂商代码,由lEEE分配,3 Byte, 24 bit。
 - 制造商分配：3 Byte，24 bit 
 
@@ -1588,7 +1587,6 @@ MAC地址表：
 接收帧
 - 接口收到Untagged帧：接收该帧，并并打上该接口PVID的Tag。
 - 接口收到Tagged顿：当该帧的VLANID与该接口的PVID相同时，接收该帧。当该帧的VLANID与该接口的PVID不同时，丢弃该帧。
-
 发送帧
 - 帧的VLANID与接口PVID相同：先剥离该帧的Tag，然后再将其从该接口发出。
 - 帧的VLANID与接口PVID不同：禁止将该帧从该接口发出。
@@ -1605,7 +1603,6 @@ MAC地址表：
 接收帧
 - 接口收到Untagged帧：打上PVID，当PVID在该接口允许通过的VLAN列表里时接收该帧；当PVID不在允许通过的VLAN列表里时，丢弃该帧。
 - 接口收到Tagged顿：当该帧的VLANID在该接口允许通过的VLAN列表里时，接收该帧，否则丢弃该帧。
-
 发送帧
 - 帧的VLANID与接口PVID相同：当管理员通过命令设置发送该VLAN的帧时不携带Tag，则将该帧的Tag剥除，然后将其从该接口发送出。
 - 帧的VLANID与接口PVID不同：当管理员通过命令设置发送该VLAN的帧时携带Tag，则保留该帧的Tag，然后将其从该接口发送出去。
@@ -1656,7 +1653,7 @@ RSTP（RapidSpanningTreeProtocol）协议基于sTP协议，对原有的sTP协议
 
 ![[Pasted image 20250814234516.png]]
 - 运行STP的交换机使用接口ID来标识每个接口，接口ID主要用于在特定场景下选举指定接口。
-- 接口iD由两部分构成的，高4bit是接口优先级，低12bit是接口编号。
+- 接口ID由两部分构成的，高4bit是接口优先级，低12bit是接口编号。
 - 激活STP的接口会维护一个缺省的接口优先级，在华为交换机上，该值为128。用户可以根据实际需要，通过命令修改该优先级。
 
 ## 10.5 BPDU
@@ -1723,7 +1720,6 @@ BPDU（BridgeProtocolDataUnit，网桥协议数据单元）
 - STP操作的最后一步是阻塞网络中的非指定接口。这一步完成后，风网络中的二层环路就此消除。
 ## 10.7 STP的接口状态
 
-
 | 状态名称           | 状态描述                                                                                        |
 | -------------- | ------------------------------------------------------------------------------------------- |
 | 禁用（disable）    | 该接口不能收发BPDU，也不能收发业务数据帧，例如接口为down。                                                           |
@@ -1731,6 +1727,183 @@ BPDU（BridgeProtocolDataUnit，网桥协议数据单元）
 | 侦听(Listening)  | 当接口处于该状态时，表明STP初步认定该接口为根接口或指定接口，但接口依<br>然处于STP计算的过程中，此时接口可以收发BPDU，但是不能收发业务数据帧，也不会进行MAC地址学习。 |
 | 学习(Learning)   | 当接口处于该状态时，会侦听业务数据帧页（但是不能转发业务数据帧），并且在收到业务数据帧后进行MAC地址学习。                                      |
 | 转发（Forwarding） | 处于该状态的接口可以正常地收发业务数据帧，也会进行BPDU处理。接口的角色需是根接口或指定接口才能进入转发状态。                                    |
+|                |                                                                                             |
+
+## 10.8 基础操作
+
+- 关闭stp
+	~~~shell
+	[Huawei]stp disable
+	~~~
+- 开启stp
+	~~~shell
+	[Huawei]stp enable
+	~~~
+- 设置 stp 模式
+	~~~shell
+	[Huawei]stp mode stp
+	~~~
+- 查询 stp 信息
+	~~~shell
+	[Huawei]display stp [brief]   # brief 为摘要信息
+	~~~
+- 设置 STP BID 优先级
+	~~~shell
+	[Huawei]stp priority 0
+	~~~
+- 将设备设置为备份根网桥（将 BID 优先级设置为4096）
+	~~~shell
+	[Huawei]stp root primary 
+	~~~
+- 查询设备MAC地址
+	~~~shell
+	[Huawei]display bridge mac-address 
+	~~~
+# 十一、VLAN间通信
+
+VLAN 间通信（Inter-VLAN Communication）是指**不同 VLAN 之间的主机能够互相通信**。由于 VLAN 在二层（数据链路层）上隔离了广播域，因此默认情况下不同 VLAN 之间无法直接通信。要实现 VLAN 间通信，必须借助**三层设备**（如路由器或三层交换机）进行路由转发。
+
+## 11.1 路由器
+
+### 1) 单臂路由
+
+~~~shell
+[PC1]———[Switch]———[Router]
+  |         |             |
+VLAN10   Trunk        Subinterface
+[PC2]—– (Fa0/1)      Fa0/0.10 → VLAN10
+                     Fa0/0.20 → VLAN20
+~~~
+- 交换机配置 Access 端口连接主机，Trunk 端口连接路由器。
+- 路由器使用一个物理接口，划分为多个 **子接口（Sub-interface）**，每个子接口对应一个 VLAN。
+- 子接口启用 **802.1Q 封装（Dot1Q）**，识别 VLAN 标签。
+
+操作：
+~~~shell
+# 进入物理接口
+Router(config)# interface fastEthernet 0/0
+Router(config-if)# no shutdown  # 激活物理接口
+
+# 创建子接口 .10 对应 VLAN 10
+Router(config)# interface fastEthernet 0/0.10
+Router(config-subif)# encapsulation dot1Q 10  # 启用 802.1Q 封装，VLAN ID 10
+Router(config-subif)# ip address 192.168.10.1 255.255.255.0
+
+# 创建子接口 .20 对应 VLAN 20
+Router(config)# interface fastEthernet 0/0.20
+Router(config-subif)# encapsulation dot1Q 20
+Router(config-subif)# ip address 192.168.20.1 255.255.255.0
+~~~
+
+> **VLAN 间通信必须通过三层设备实现**，路由器通过 **子接口 + 802.1Q 封装** 可以实现跨 VLAN 路由，即“单臂路由”。
+## 11.2 三层交换机
+
+![[Pasted image 20250818185905.png]]
+
+~~~shell
+[Huawei]interface vlanif 20
+[Huawei-Vlanif20]
+Aug 18 2025 18:23:22-08:00 Huawei %%01IFNET/4/IF_STATE(l)[3]:Interface Vlanif20 
+has turned into UP state.
+[Huawei-Vlanif20]
+[Huawei-Vlanif20]ip address 2.0.0.254 8
+~~~
+
+- 二层交换机（Layer2Switch）指的是只具备二层交换功能的交换机。
+- 三层交换机（Layer3Switch）除了具备二层交换机的功能，还支持通过三层接口（如VLANIF接口）实现路由转发功能。
+- VLANIF接口是一种三层的逻辑接口，支持VLANTag的剥离和添加，因此可以通过VLANIF接口实现VLAN之间的通信。
+- VLANIF接口编号与所对应的VLANID相同，如VLAN10对应VLANIF10。
+
+# 十二、ACL
+
+## 12.1 组成
+
+ACL由若干条permit或deny语句组成。每条语句就是该AcL的一条规则，每条语句中的permit或deny
+就是与这条规则相对应的处理动作。
+
+![[Pasted image 20250816180352.png]]
+- 匹配顺序从上向下
+
+使用场景
+
+![[Pasted image 20250818190140.png]]
+
+## 12.2 分类
+
+基础ACL
+
+- 仅限制源ip，不限制目的ip。
+- 单的入方向流量控制、限制某网段访问设备。
+
+~~~shell
+[Huawei]acl number 2000
+[Huawei-acl-basic-2000]rule deny source 1.0.0.1 0  # 规则
+[Huawei-acl-basic-2000]q
+[Huawei]interface  GigabitEthernet 0/0/1
+[Huawei-GigabitEthernet0/0/1]traffic-filter inbound acl 2000   # 绑定acl
+~~~
+
+高级ACL
+
+- 源IP、目的IP、源端口、目的端口、协议类型（TCP/UDP/ICMP等）、ICMP类型。
+- 精细化流量控制，如限制某IP访问某服务器的特定端口
+
+> 总结一句话：**基础ACL看“谁来的”（源IP），高级ACL看“谁来、去哪、干什么”（五元组）**。
+# 十三、链路聚合
+
+随着业务的发展和园区网络规模的不断扩大，用户对于网络的带宽、可靠性要求越来越高。传统解决方案通过升级设备方式提高网络带宽，同时通过部署余链路并辅以STP(SpanningTreeProtocol，生成树协议）协议实现高可靠。传统解决方案存在灵活度低、故障恢复时间长、配置复杂等缺点。
+
+13.1 可靠性
+
+网络的可靠性指当设备或者链路出现单点或者多点故障时保证网络服务不间断的能力。
+
+![[Pasted image 20250816182301.png]]
+
+
+# 十四、NAT
+
+## 14.1 概述
+
+随着Internet的发展和网络应用的增多，有限的IPv4公有地址已经成为制约网络发展的瓶颈。为解决这个问题，NAT（NetworkAddressTranslation，网络地址转换）技术应需而生。
+
+- 随着互联网用户的增多，IPv4的公有地址资源显得越发短缺。
+- 同时IPv4公有地址资源存在地址分配不均的问题，这导致部分地区的IPv4可用公有地址严重不足。
+- 为解决该问题，使用过渡技术解决IPv4公有地址短缺就显得尤为必要。
+
+## 14.2 静态NAT
+
+静态NAT：每个私有地址都有一个与之对应并且固定的公有地址，即私有地址和公有地址之间的关系是一对一映射。
+
+![[Pasted image 20250818194229.png]]
+
+配置
+
+1. 方式一：接口视图配置
+~~~shell
+[Huawei-GigabitEthernetO/O/O]nat static global {global-address} inside {host-address}
+~~~
+
+2. 方式二：系统视图配置
+~~~shell
+[Huawei]nat static global {global-address} inside {host-address}
+~~~
+配置命令相同，视图为系统视图，之后在具体的接口下开启静态NAT。
+
+~~~shell
+[Huawei-GigabitEthernet0/0/0]nat static enable
+~~~
+在接口下使能natstatic功能。
+
+## 14.3 动态NAT
+
+动态NAT：静态NAT严格地一对一进行地址映射，这就导致即便内网主机长时间离线或者不发送数据时，与之对应的公有地址也处于使用状态。为了避免地址浪费，动态NAT提出了地址池的概念：所有可用的公有地址组成地址池。
+
+![[Pasted image 20250819004107.png]]
+![[Pasted image 20250819004131.png]]
+
+配置
+1. 创建地址池
+## 14.4 NAPT、Easy-ip
 
 
 
